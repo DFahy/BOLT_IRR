@@ -1,0 +1,82 @@
+# Supabase Configuration File
+# This file configures your local development environment and can be used to update project settings
+
+[api]
+enabled = true
+port = 54321
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = true
+port = 54329
+# Use percentage-based connection allocation (recommended for scalability)
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[realtime]
+enabled = true
+port = 54323
+
+[studio]
+enabled = true
+port = 54324
+
+[inbucket]
+enabled = true
+port = 54325
+smtp_port = 54326
+pop3_port = 54327
+
+[storage]
+enabled = true
+port = 54328
+
+[auth]
+enabled = true
+port = 54329
+
+# Security: Enable leaked password protection
+# This checks passwords against the HaveIBeenPwned database
+enable_signup = true
+enable_anonymous_sign_ins = false
+
+# Site URL for redirects
+site_url = "http://localhost:5173"
+
+# Additional providers can be configured here
+[auth.external]
+
+# Enable HaveIBeenPwned integration for leaked password detection
+[auth.external.haveibeenpwned]
+enabled = true
+
+# Hook for checking password strength and leaked passwords
+[auth.hook.password_verification]
+enabled = true
+
+# Email configuration
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+# Security settings
+[auth.security]
+# Refresh token reuse interval in seconds
+refresh_token_reuse_interval = 10
+# Session inactivity timeout in seconds (24 hours)
+session_inactivity_timeout = 86400
+
+[edge_runtime]
+enabled = true
+port = 54330
+
+# Logging configuration
+[analytics]
+enabled = false

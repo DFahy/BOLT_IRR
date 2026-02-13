@@ -1,0 +1,986 @@
+import { useState } from 'react';
+import { Upload, Plus, Trash2, Calculator, Download, LogOut, ClipboardPaste, X, BarChart3, TrendingUp } from 'lucide-react';
+import { CashFlow, calculateXIRR, parseCSV, XIRRResult } from './utils/xirr';
+import { useAuth } from './lib/AuthContext';
+import { Auth } from './components/Auth';
+import { DatasetManager } from './components/DatasetManager';
+import { MultiPeriodInput } from './components/MultiPeriodInput';
+
+interface FlowInput {
+  id: string;
+  date: string;
+  amount: string;
+  description: string;
+}
+
+interface StartValue {
+  id: string;
+  date: string;
+  value: string;
+  label?: string;
+}
+
+interface Period {
+  id: string;
+  label: string;
+  startDate: string;
+  endDate: string;
+  startValue: string;
+  endValue: string;
+}
+
+interface PeriodValues {
+  startValues: StartValue[];
+  periods: Period[];
+}
+
+type ViewMode = 'simple' | 'multi-period';
+
+function App() {
+  const { user, loading: authLoading, signOut } = useAuth();
+  const [viewMode, setViewMode] = useState<ViewMode>('simple');
+  const [flows, setFlows] = useState<FlowInput[]>([
+    { id: '1', date: '', amount: '', description: 'Initial Investment' },
+    { id: '2', date: '', amount: '', description: 'Final Value' }
+  ]);
+  const [periodFlows, setPeriodFlows] = useState<FlowInput[]>([]);
+  const [periodValues, setPeriodValues] = useState<PeriodValues>(() => {
+    const today = new Date().toISOString().split('T')[0];
+
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+    const fiveYearsAgo = new Date();
+    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+
+    const tenYearsAgo = new Date();
+    tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
+
+    return {
+      startValues: [],
+      periods: [
+        { id: '1', label: '1 Year', startDate: oneYearAgo.toISOString().split('T')[0], endDate: today, startValue: '', endValue: '' },
+        { id: '2', label: '5 Years', startDate: fiveYearsAgo.toISOString().split('T')[0], endDate: today, startValue: '', endValue: '' },
+        { id: '3', label: '10 Years', startDate: tenYearsAgo.toISOString().split('T')[0], endDate: today, startValue: '', endValue: '' }
+      ]
+    };
+  });
+  const [result, setResult] = useState<XIRRResult | null>(null);
+  const [error, setError] = useState<string>('');
+  const [showPasteDialog, setShowPasteDialog] = useState(false);
+  const [pasteData, setPasteData] = useState('');
+
+  const cashFlows: CashFlow[] = flows
+    .filter(f => f.date && f.amount)
+    .map(f => ({
+      date: new Date(f.date),
+      amount: parseFloat(f.amount),
+      description: f.description
+    }));
+
+  const findStartValueForDate = (startDateStr: string): string => {
+    if (!startDateStr || periodValues.startValues.length === 0) return '';
+
+    const targetDate = new Date(startDateStr);
+
+    const sortedStartValues = [...periodValues.startValues].sort((a, b) =>
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    let matchingValue = sortedStartValues.find(sv =>
+      new Date(sv.date).getTime() === targetDate.getTime()
+    );
+
+    if (!matchingValue) {
+      for (let i = sortedStartValues.length - 1; i >= 0; i--) {
+        if (new Date(sortedStartValues[i].date).getTime() <= targetDate.getTime()) {
+          matchingValue = sortedStartValues[i];
+          break;
+        }
+      }
+    }
+
+    return matchingValue?.value || '';
+  };
+
+  const buildPeriodCashFlows = (startDateStr: string, endDateStr: string, startValue: string, endValue: string): CashFlow[] => {
+    if (!startDateStr || !endDateStr || !endValue) return [];
+
+    const effectiveStartValue = startValue || findStartValueForDate(startDateStr);
+
+    if (!effectiveStartValue) return [];
+
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+
+    const flows: CashFlow[] = [];
+
+    flows.push({
+      date: startDate,
+      amount: -Math.abs(parseFloat(effectiveStartValue)),
+      description: 'Period Start Value'
+    });
+
+    const intermediateFlows = periodFlows
+      .filter(f => f.date && f.amount)
+      .map(f => ({
+        date: new Date(f.date),
+        amount: parseFloat(f.amount),
+        description: f.description
+      }))
+      .filter(f => f.date >= startDate && f.date <= endDate);
+
+    flows.push(...intermediateFlows);
+
+    flows.push({
+      date: endDate,
+      amount: parseFloat(endValue),
+      description: 'Period End Value'
+    });
+
+    return flows.sort((a, b) => a.date.getTime() - b.date.getTime());
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-xl text-slate-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Auth />;
+  }
+
+  const addFlow = () => {
+    setFlows([...flows, {
+      id: Date.now().toString(),
+      date: '',
+      amount: '',
+      description: ''
+    }]);
+  };
+
+  const removeFlow = (id: string) => {
+    if (flows.length > 2) {
+      setFlows(flows.filter(f => f.id !== id));
+    }
+  };
+
+  const updateFlow = (id: string, field: keyof FlowInput, value: string) => {
+    setFlows(flows.map(f => f.id === id ? { ...f, [field]: value } : f));
+  };
+
+  const calculateIRR = () => {
+    setError('');
+    setResult(null);
+
+    const cashFlows: CashFlow[] = flows
+      .filter(f => f.date && f.amount)
+      .map(f => ({
+        date: new Date(f.date),
+        amount: parseFloat(f.amount),
+        description: f.description
+      }));
+
+    if (cashFlows.length < 2) {
+      setError('Please enter at least 2 cash flows with valid dates and amounts.');
+      return;
+    }
+
+    const hasOutflow = cashFlows.some(f => f.amount < 0);
+    const hasInflow = cashFlows.some(f => f.amount > 0);
+
+    if (!hasOutflow || !hasInflow) {
+      setError('You need at least one negative cash flow (investment) and one positive cash flow (return).');
+      return;
+    }
+
+    const calculatedResult = calculateXIRR(cashFlows);
+
+    if (!calculatedResult) {
+      setError('Unable to calculate XIRR. Please check your data.');
+      return;
+    }
+
+    setResult(calculatedResult);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      try {
+        const lines = text.trim().split('\n').filter(line => line.trim());
+        let extractedPeriodValues: PeriodValues | null = null;
+        let newFlows: FlowInput[] = [];
+
+        // Check if this is a multi-section template format
+        const hasMultiPeriodSections = text.includes('Period Definitions:') ||
+                                       text.includes('Period Label,Start Date,End Date');
+
+        if (viewMode === 'multi-period' && hasMultiPeriodSections) {
+          // Parse multi-section template format
+          const startValues: StartValue[] = [];
+          const periods: Period[] = [];
+
+          let inStartValuesSection = false;
+          let inPeriodSection = false;
+          let inCashFlowSection = false;
+
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+
+            // Toggle sections
+            if (trimmedLine.includes('Start Values:')) {
+              inStartValuesSection = true;
+              inPeriodSection = false;
+              inCashFlowSection = false;
+              continue;
+            }
+            if (trimmedLine.includes('Period Definitions:')) {
+              inStartValuesSection = false;
+              inPeriodSection = true;
+              inCashFlowSection = false;
+              continue;
+            }
+            if (trimmedLine.includes('Intermediate Cash Flows')) {
+              inStartValuesSection = false;
+              inPeriodSection = false;
+              inCashFlowSection = true;
+              continue;
+            }
+
+            // Skip headers
+            if (trimmedLine.startsWith('Period Label,') || trimmedLine.startsWith('Date,')) {
+              continue;
+            }
+
+            // Parse start values section
+            if (inStartValuesSection) {
+              const parts = trimmedLine.split(',');
+
+              if (parts.length >= 2) {
+                const date = parseDateString(parts[0].trim());
+                const value = parts[1].trim().replace(/[^0-9.-]/g, '');
+                const label = parts.length > 2 ? parts[2].trim() : '';
+
+                if (date && value && !isNaN(parseFloat(value))) {
+                  startValues.push({
+                    id: Date.now().toString() + startValues.length,
+                    date,
+                    value,
+                    label
+                  });
+                }
+              }
+              continue;
+            }
+
+            // Parse period values section
+            if (inPeriodSection) {
+              const parts = trimmedLine.split(',');
+
+              if (parts.length >= 4) {
+                const label = parts[0].trim();
+                const startDate = parseDateString(parts[1].trim());
+                const endDate = parseDateString(parts[2].trim());
+                const endValue = parts[3].trim().replace(/[^0-9.-]/g, '');
+
+                if (startDate && endDate) {
+                  periods.push({
+                    id: Date.now().toString() + periods.length,
+                    label,
+                    startDate,
+                    endDate,
+                    startValue: '',
+                    endValue
+                  });
+                }
+              }
+              continue;
+            }
+
+            // Parse cash flows section
+            if (inCashFlowSection) {
+              const parts = trimmedLine.split(',');
+
+              if (parts.length >= 2) {
+                const dateStr = parts[0].trim();
+                const amountStr = parts[1].trim();
+                const descriptionStr = parts.length > 2 ? parts[2].trim() : '';
+
+                const date = parseDateString(dateStr);
+                const amount = amountStr.replace(/[^0-9.-]/g, '');
+
+                if (date && amount && !isNaN(parseFloat(amount))) {
+                  newFlows.push({
+                    id: `${Date.now()}-${newFlows.length}`,
+                    date,
+                    amount,
+                    description: descriptionStr
+                  });
+                }
+              }
+            }
+          }
+
+          // Build extracted period values
+          extractedPeriodValues = {
+            startValues: startValues.length > 0 ? startValues : [],
+            periods: periods.length > 0 ? periods : periodValues.periods
+          };
+        } else {
+          // Parse simple CSV format
+          const cashFlows = parseCSV(text);
+          if (cashFlows.length === 0) {
+            setError('No valid data found in CSV file.');
+            return;
+          }
+
+          newFlows = cashFlows.map((cf, idx) => ({
+            id: Date.now().toString() + idx,
+            date: cf.date.toISOString().split('T')[0],
+            amount: cf.amount.toString(),
+            description: cf.description || ''
+          }));
+        }
+
+        if (viewMode === 'multi-period') {
+          setPeriodFlows(newFlows);
+          if (extractedPeriodValues) {
+            setPeriodValues(extractedPeriodValues);
+          }
+        } else {
+          setFlows(newFlows);
+        }
+        setError('');
+        setResult(null);
+      } catch (err) {
+        setError('Error parsing CSV file. Please check the format.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const downloadTemplate = () => {
+    let csvContent: string;
+
+    if (viewMode === 'multi-period') {
+      const startValueLines = periodValues.startValues.length > 0
+        ? periodValues.startValues.map(sv => `${sv.date},${sv.value},${sv.label || ''}`).join('\n')
+        : `2024-01-01,100000,January Start
+2024-02-01,105000,February Start
+2024-03-01,108000,March Start`;
+
+      const periodLines = periodValues.periods.map(p =>
+        `${p.label},${p.startDate || '2024-01-01'},${p.endDate || '2024-12-31'},${p.endValue || '115000'}`
+      ).join('\n');
+
+      csvContent = `MULTI-PERIOD XIRR TEMPLATE
+
+Instructions:
+1. Define all your start values (portfolio values at different points in time)
+2. Define your analysis periods - the system will automatically match start values based on the start date
+3. Add intermediate cash flows (contributions, distributions, etc.) with dates
+4. Upload or paste this file - all values will be automatically populated!
+
+Start Values:
+Date,Value,Label
+${startValueLines}
+
+Period Definitions:
+Period Label,Start Date,End Date,End Value
+${periodLines}
+
+Intermediate Cash Flows:
+Date,Amount,Description
+2024-03-15,-5000,Additional Investment
+2024-06-15,2000,Distribution
+2024-09-15,-3000,Additional Investment
+2024-12-15,3000,Distribution
+
+Note: Use negative amounts for investments, positive for distributions`;
+    } else {
+      csvContent = `Date,Amount,Description
+2024-01-01,-100000,Initial Investment
+2024-06-15,5000,Dividend Received
+2024-09-30,-10000,Additional Investment
+2024-12-31,115000,Final Value
+
+Example with Loss:
+2024-01-01,-620400.58,Initial Investment
+2024-03-15,25000,Distribution
+2024-06-20,-50000,Additional Capital Call
+2024-12-31,-772956.68,Current Position Value (Loss)`;
+    }
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = viewMode === 'multi-period' ? 'multi_period_template.csv' : 'irr_template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleLoadDataset = (savedFlows: { date: string; amount: string; description: string }[], savedPeriodValues?: PeriodValues) => {
+    const newFlows: FlowInput[] = savedFlows.map((cf, idx) => ({
+      id: Date.now().toString() + idx,
+      date: cf.date,
+      amount: cf.amount,
+      description: cf.description || ''
+    }));
+
+    if (viewMode === 'multi-period') {
+      setPeriodFlows(newFlows);
+      if (savedPeriodValues) {
+        setPeriodValues(savedPeriodValues);
+      }
+    } else {
+      setFlows(newFlows);
+    }
+    setError('');
+    setResult(null);
+  };
+
+  const parseDateString = (dateStr: string): string => {
+    const cleanDate = dateStr.trim();
+    const parsedDate = new Date(cleanDate);
+
+    if (isNaN(parsedDate.getTime())) {
+      return '';
+    }
+
+    const year = parsedDate.getFullYear();
+    const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(parsedDate.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const handlePasteData = () => {
+    try {
+      const lines = pasteData.trim().split('\n').filter(line => line.trim());
+
+      if (lines.length === 0) {
+        setError('No data to paste');
+        return;
+      }
+
+      const newFlows: FlowInput[] = [];
+      let extractedPeriodValues: PeriodValues | null = null;
+
+      // Check if this is a multi-section template format
+      const hasMultiPeriodSections = pasteData.includes('Period Definitions:') ||
+                                     pasteData.includes('Period Label,Start Date,End Date');
+
+      if (viewMode === 'multi-period' && hasMultiPeriodSections) {
+        // Parse multi-section template format
+        const startValues: StartValue[] = [];
+        const periods: Period[] = [];
+
+        let inStartValuesSection = false;
+        let inPeriodSection = false;
+        let inCashFlowSection = false;
+
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+
+          // Toggle sections
+          if (trimmedLine.includes('Start Values:')) {
+            inStartValuesSection = true;
+            inPeriodSection = false;
+            inCashFlowSection = false;
+            continue;
+          }
+          if (trimmedLine.includes('Period Definitions:')) {
+            inStartValuesSection = false;
+            inPeriodSection = true;
+            inCashFlowSection = false;
+            continue;
+          }
+          if (trimmedLine.includes('Intermediate Cash Flows')) {
+            inStartValuesSection = false;
+            inPeriodSection = false;
+            inCashFlowSection = true;
+            continue;
+          }
+
+          // Skip headers
+          if (trimmedLine.startsWith('Period Label,') || trimmedLine.startsWith('Date,') || trimmedLine.includes('Date,Value,Label')) {
+            continue;
+          }
+
+          // Parse start values section
+          if (inStartValuesSection) {
+            let parts: string[];
+            if (trimmedLine.includes('\t')) {
+              parts = trimmedLine.split('\t');
+            } else {
+              parts = trimmedLine.split(',');
+            }
+
+            if (parts.length >= 2) {
+              const date = parseDateString(parts[0].trim());
+              const value = parts[1].trim().replace(/[^0-9.-]/g, '');
+              const label = parts.length > 2 ? parts[2].trim() : '';
+
+              if (date && value && !isNaN(parseFloat(value))) {
+                startValues.push({
+                  id: Date.now().toString() + startValues.length,
+                  date,
+                  value,
+                  label
+                });
+              }
+            }
+            continue;
+          }
+
+          // Parse period values section
+          if (inPeriodSection) {
+            let parts: string[];
+            if (trimmedLine.includes('\t')) {
+              parts = trimmedLine.split('\t');
+            } else {
+              parts = trimmedLine.split(',');
+            }
+
+            if (parts.length >= 4) {
+              const label = parts[0].trim();
+              const startDate = parseDateString(parts[1].trim());
+              const endDate = parseDateString(parts[2].trim());
+              const endValue = parts[3].trim().replace(/[^0-9.-]/g, '');
+
+              if (startDate && endDate) {
+                periods.push({
+                  id: Date.now().toString() + periods.length,
+                  label,
+                  startDate,
+                  endDate,
+                  startValue: '',
+                  endValue
+                });
+              }
+            }
+            continue;
+          }
+
+          // Parse cash flows section
+          if (inCashFlowSection) {
+            let parts: string[];
+            if (trimmedLine.includes('\t')) {
+              parts = trimmedLine.split('\t');
+            } else {
+              parts = trimmedLine.split(',');
+            }
+
+            if (parts.length >= 2) {
+              const dateStr = parts[0].trim();
+              const amountStr = parts[1].trim();
+              const descriptionStr = parts.length > 2 ? parts[2].trim() : '';
+
+              const date = parseDateString(dateStr);
+              const amount = amountStr.replace(/[^0-9.-]/g, '');
+
+              if (date && amount && !isNaN(parseFloat(amount))) {
+                newFlows.push({
+                  id: `${Date.now()}-${newFlows.length}`,
+                  date,
+                  amount,
+                  description: descriptionStr
+                });
+              }
+            }
+          }
+        }
+
+        // Build extracted period values
+        extractedPeriodValues = {
+          startValues: startValues.length > 0 ? startValues : [],
+          periods: periods.length > 0 ? periods : periodValues.periods
+        };
+      } else {
+        // Parse simple format (single line per cash flow)
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+
+          let parts: string[];
+          if (line.includes('\t')) {
+            parts = line.split('\t');
+          } else if (line.includes(',')) {
+            parts = line.split(',');
+          } else {
+            continue;
+          }
+
+          if (parts.length < 2) continue;
+
+          const dateStr = parts[0].trim();
+          const amountStr = parts[1].trim();
+          const descriptionStr = parts.length > 2 ? parts[2].trim() : '';
+
+          const date = parseDateString(dateStr);
+          const amount = amountStr.replace(/[^0-9.-]/g, '');
+
+          if (date && amount && !isNaN(parseFloat(amount))) {
+            newFlows.push({
+              id: `${Date.now()}-${i}`,
+              date,
+              amount,
+              description: descriptionStr
+            });
+          }
+        }
+      }
+
+      if (newFlows.length === 0 && viewMode === 'simple') {
+        setError('No valid data found. Please ensure your data has dates and amounts.');
+        return;
+      }
+
+      if (viewMode === 'multi-period') {
+        setPeriodFlows(newFlows);
+        if (extractedPeriodValues) {
+          setPeriodValues(extractedPeriodValues);
+        }
+      } else {
+        setFlows(newFlows);
+      }
+      setError('');
+      setResult(null);
+      setShowPasteDialog(false);
+      setPasteData('');
+    } catch (err) {
+      setError('Error parsing pasted data. Please check the format.');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                  <Calculator className="w-8 h-8" />
+                  Investment IRR Calculator
+                </h1>
+                <p className="text-blue-100 mt-2">Calculate Extended Internal Rate of Return (XIRR) for your investments</p>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <div className="text-blue-100 text-sm">{user.email}</div>
+                <button
+                  onClick={signOut}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 hover:bg-blue-400 text-white rounded-lg transition-colors text-sm font-medium"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-8">
+            <div className="flex justify-center mb-6">
+              <div className="inline-flex rounded-lg bg-slate-100 p-1">
+                <button
+                  onClick={() => setViewMode('simple')}
+                  className={`flex items-center gap-2 px-6 py-2 rounded-md font-medium transition-colors ${
+                    viewMode === 'simple'
+                      ? 'bg-white text-blue-700 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  <Calculator className="w-4 h-4" />
+                  Simple Calculator
+                </button>
+                <button
+                  onClick={() => setViewMode('multi-period')}
+                  className={`flex items-center gap-2 px-6 py-2 rounded-md font-medium transition-colors ${
+                    viewMode === 'multi-period'
+                      ? 'bg-white text-blue-700 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  Multi-Period Analysis
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 mb-8 flex-wrap">
+              <DatasetManager
+                onLoad={handleLoadDataset}
+                currentFlows={
+                  viewMode === 'multi-period'
+                    ? periodFlows.map(f => ({ date: f.date, amount: f.amount, description: f.description }))
+                    : flows.map(f => ({ date: f.date, amount: f.amount, description: f.description }))
+                }
+                periodValues={viewMode === 'multi-period' ? periodValues : undefined}
+                isMultiPeriod={viewMode === 'multi-period'}
+              />
+              <button
+                onClick={() => setShowPasteDialog(true)}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors font-medium"
+              >
+                <ClipboardPaste className="w-4 h-4" />
+                Paste Data
+              </button>
+              <button
+                onClick={downloadTemplate}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
+              >
+                <Download className="w-4 h-4" />
+                Download CSV Template
+              </button>
+              <label className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer font-medium">
+                <Upload className="w-4 h-4" />
+                Upload CSV File
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            {viewMode === 'simple' ? (
+              <>
+                <div className="mb-8">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold text-slate-800">Cash Flows</h2>
+                    <button
+                      onClick={addFlow}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Flow
+                    </button>
+                  </div>
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-12 gap-3 text-sm font-medium text-slate-600 px-2">
+                  <div className="col-span-3">Date</div>
+                  <div className="col-span-3">Amount</div>
+                  <div className="col-span-5">Description</div>
+                  <div className="col-span-1"></div>
+                </div>
+
+                {flows.map((flow) => (
+                  <div key={flow.id} className="grid grid-cols-12 gap-3 items-center">
+                    <input
+                      type="date"
+                      value={flow.date}
+                      onChange={(e) => updateFlow(flow.id, 'date', e.target.value)}
+                      className="col-span-3 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={flow.amount}
+                      onChange={(e) => updateFlow(flow.id, 'amount', e.target.value)}
+                      placeholder="Amount"
+                      className="col-span-3 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <input
+                      type="text"
+                      value={flow.description}
+                      onChange={(e) => updateFlow(flow.id, 'description', e.target.value)}
+                      placeholder="Description"
+                      className="col-span-5 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={() => removeFlow(flow.id)}
+                      disabled={flows.length <= 2}
+                      className="col-span-1 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg text-sm text-slate-700">
+                <p className="font-medium mb-2">Tips:</p>
+                <ul className="list-disc list-inside space-y-1 text-slate-600">
+                  <li>Use negative amounts for investments/outflows (e.g., -100000)</li>
+                  <li>Use positive amounts for returns/inflows (e.g., 115000)</li>
+                  <li>Enter dates in chronological order for best results</li>
+                  <li>Returns over 12 months are automatically annualized</li>
+                </ul>
+                <div className="mt-3 pt-3 border-t border-blue-200">
+                  <p className="font-medium mb-2 text-amber-700">For Losses & Negative Positions:</p>
+                  <ul className="list-disc list-inside space-y-1 text-slate-600">
+                    <li>If your position value is negative (you owe money), enter it as a negative final cash flow</li>
+                    <li>Example: Invested -$100k, now worth -$50k means you'd need to pay $50k to exit</li>
+                    <li>For positions with total loss: enter the current value as what you'd receive if liquidated (can be 0 or negative)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+                <button
+                  onClick={calculateIRR}
+                  className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-lg shadow-md hover:shadow-lg"
+                >
+                  Calculate XIRR
+                </button>
+
+                {error && (
+                  <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                    {error}
+                  </div>
+                )}
+
+                {result && (
+              <div className="mt-8 p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                <h3 className="text-2xl font-bold text-slate-800 mb-6">Results</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <div className="text-sm text-slate-600 mb-1">XIRR (Annualized Return)</div>
+                    <div className={`text-3xl font-bold ${parseFloat(result.xirrPercent) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {result.xirrPercent}%
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">Annualized rate of return</div>
+                  </div>
+
+                  {!result.annualized && (
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <div className="text-sm text-slate-600 mb-1">Simple Return (Non-Annualized)</div>
+                      <div className={`text-3xl font-bold ${parseFloat(result.simpleReturnPercent) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {result.simpleReturnPercent}%
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">Actual return for this period</div>
+                    </div>
+                  )}
+
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <div className="text-sm text-slate-600 mb-1">Investment Period</div>
+                    <div className="text-3xl font-bold text-slate-800">
+                      {Math.round(result.totalDays)} days
+                    </div>
+                    <div className="text-sm text-slate-500">
+                      ({(result.totalDays / 365.25).toFixed(2)} years)
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <div className="text-sm text-slate-600 mb-1">First Cash Flow</div>
+                    <div className={`text-2xl font-bold ${result.firstCashFlow < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      ${result.firstCashFlow.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <div className="text-sm text-slate-600 mb-1">Last Cash Flow</div>
+                    <div className={`text-2xl font-bold ${result.lastCashFlow < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      ${result.lastCashFlow.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <div className="text-sm text-slate-600 mb-1">Total Invested</div>
+                    <div className="text-2xl font-bold text-slate-800">
+                      ${result.totalOutflows.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <div className="text-sm text-slate-600 mb-1">Total Received</div>
+                    <div className="text-2xl font-bold text-slate-800">
+                      ${result.totalInflows.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <div className="text-sm text-slate-600 mb-1">Net Cash Flow</div>
+                  <div className={`text-2xl font-bold ${result.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ${result.netCashFlow.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <MultiPeriodInput
+            periodValues={periodValues}
+            setPeriodValues={setPeriodValues}
+            flows={periodFlows}
+            setFlows={setPeriodFlows}
+            buildPeriodCashFlows={buildPeriodCashFlows}
+          />
+        )}
+          </div>
+        </div>
+
+        <div className="mt-6 text-center text-sm text-slate-600">
+          <p>XIRR uses the Newton-Raphson method to calculate the internal rate of return for irregular cash flows</p>
+        </div>
+      </div>
+
+      {showPasteDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-slate-800">Paste Data</h3>
+              <button onClick={() => setShowPasteDialog(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Paste your data (tab-delimited or comma-separated)
+                </label>
+                <textarea
+                  value={pasteData}
+                  onChange={(e) => setPasteData(e.target.value)}
+                  placeholder="1/1/2011	-620400.58
+1/22/2011	2606216.93	Distribution
+2/10/2011	-1932344.71	Additional Investment"
+                  rows={10}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm"
+                />
+                <p className="mt-2 text-xs text-slate-500">
+                  Format: Date [tab/comma] Amount [tab/comma] Description (optional)
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handlePasteData}
+                  disabled={!pasteData.trim()}
+                  className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Import Data
+                </button>
+                <button
+                  onClick={() => {
+                    setShowPasteDialog(false);
+                    setPasteData('');
+                  }}
+                  className="flex-1 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
