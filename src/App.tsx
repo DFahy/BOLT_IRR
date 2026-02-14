@@ -224,6 +224,8 @@ function App() {
     setError('');
     setResult(null);
     setShowCalcSelector(false);
+
+    alert(`✓ Imported: ${calc['calc-id']}\n\n${newFlows.length} cash flows\n${newPeriods.length} analysis windows\n\nSwitch to Multi-Period mode and click "Calculate Multi-Period XIRR" to verify results.`);
   };
 
   const handleJSONImport = (jsonText: string) => {
@@ -243,11 +245,13 @@ function App() {
           setApiData(data);
           setAvailableCalcs(data.calculations);
           setShowCalcSelector(true);
+          setError('');
           return;
         }
 
         // Single calculation - import directly
         importAPICalculation(data.calculations[0]);
+        alert(`API data imported successfully!\n${data.calculations[0]['calc-id']}\n${data.calculations[0].dates?.length || 0} cash flows, ${data.calculations[0].windows?.length || 0} windows`);
         return;
       }
 
@@ -500,6 +504,8 @@ function App() {
       }
     };
     reader.readAsText(file);
+    // Reset the input so the same file can be selected again
+    event.target.value = '';
   };
 
   const downloadTemplate = (format: 'csv' | 'json' = 'csv') => {
