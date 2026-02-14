@@ -172,6 +172,60 @@ function App() {
     setFlows(flows.map(f => f.id === id ? { ...f, [field]: value } : f));
   };
 
+  const handleJSONImport = (jsonText: string) => {
+    try {
+      const data = JSON.parse(jsonText);
+
+      // Support both array format and object format
+      let cashFlowData: any[] = [];
+      let periodValuesData: PeriodValues | null = null;
+
+      if (Array.isArray(data)) {
+        cashFlowData = data;
+      } else if (data.cashFlows && Array.isArray(data.cashFlows)) {
+        cashFlowData = data.cashFlows;
+        if (data.periodValues) {
+          periodValuesData = data.periodValues;
+        }
+      } else {
+        setError('Invalid JSON format. Expected array of cash flows or object with cashFlows property.');
+        return;
+      }
+
+      const newFlows: FlowInput[] = cashFlowData.map((item, idx) => {
+        const date = item.date ? parseDateString(item.date) : '';
+        const amount = item.amount?.toString() || '';
+        const description = item.description || '';
+
+        return {
+          id: Date.now().toString() + idx,
+          date,
+          amount,
+          description
+        };
+      }).filter(f => f.date && f.amount);
+
+      if (newFlows.length === 0) {
+        setError('No valid cash flows found in JSON file.');
+        return;
+      }
+
+      if (viewMode === 'multi-period') {
+        setPeriodFlows(newFlows);
+        if (periodValuesData) {
+          setPeriodValues(periodValuesData);
+        }
+      } else {
+        setFlows(newFlows);
+      }
+
+      setError('');
+      setResult(null);
+    } catch (err) {
+      setError('Error parsing JSON file. Please check the format.');
+    }
+  };
+
   const calculateIRR = () => {
     setError('');
     setResult(null);
@@ -215,6 +269,12 @@ function App() {
     reader.onload = (e) => {
       const text = e.target?.result as string;
       try {
+        // Check if this is a JSON file
+        if (file.name.endsWith('.json')) {
+          handleJSONImport(text);
+          return;
+        }
+
         const lines = text.trim().split('\n').filter(line => line.trim());
         let extractedPeriodValues: PeriodValues | null = null;
         let newFlows: FlowInput[] = [];
@@ -367,7 +427,48 @@ function App() {
     reader.readAsText(file);
   };
 
-  const downloadTemplate = () => {
+  const downloadTemplate = (format: 'csv' | 'json' = 'csv') => {
+    if (format === 'json') {
+      let jsonContent: any;
+
+      if (viewMode === 'multi-period') {
+        jsonContent = {
+          periodValues: {
+            startValues: [
+              { date: '2024-01-01', value: '100000', label: 'January Start' },
+              { date: '2024-02-01', value: '105000', label: 'February Start' },
+              { date: '2024-03-01', value: '108000', label: 'March Start' }
+            ],
+            periods: [
+              { label: '1 Year', startDate: '2024-01-01', endDate: '2024-12-31', endValue: '115000' }
+            ]
+          },
+          cashFlows: [
+            { date: '2024-03-15', amount: -5000, description: 'Additional Investment' },
+            { date: '2024-06-15', amount: 2000, description: 'Distribution' },
+            { date: '2024-09-15', amount: -3000, description: 'Additional Investment' },
+            { date: '2024-12-15', amount: 3000, description: 'Distribution' }
+          ]
+        };
+      } else {
+        jsonContent = [
+          { date: '2024-01-01', amount: -100000, description: 'Initial Investment' },
+          { date: '2024-06-15', amount: 5000, description: 'Dividend Received' },
+          { date: '2024-09-30', amount: -10000, description: 'Additional Investment' },
+          { date: '2024-12-31', amount: 115000, description: 'Final Value' }
+        ];
+      }
+
+      const blob = new Blob([JSON.stringify(jsonContent, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = viewMode === 'multi-period' ? 'multi_period_template.json' : 'irr_template.json';
+      a.click();
+      window.URL.revokeObjectURL(url);
+      return;
+    }
+
     let csvContent: string;
 
     if (viewMode === 'multi-period') {
@@ -465,7 +566,22 @@ Example with Loss:
 
   const handlePasteData = () => {
     try {
-      const lines = pasteData.trim().split('\n').filter(line => line.trim());
+      const trimmedData = pasteData.trim();
+
+      if (trimmedData.length === 0) {
+        setError('No data to paste');
+        return;
+      }
+
+      // Check if this is JSON format
+      if (trimmedData.startsWith('{') || trimmedData.startsWith('[')) {
+        handleJSONImport(trimmedData);
+        setShowPasteDialog(false);
+        setPasteData('');
+        return;
+      }
+
+      const lines = trimmedData.split('\n').filter(line => line.trim());
 
       if (lines.length === 0) {
         setError('No data to paste');
@@ -734,18 +850,25 @@ Example with Loss:
                 Paste Data
               </button>
               <button
-                onClick={downloadTemplate}
+                onClick={() => downloadTemplate('csv')}
                 className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
               >
                 <Download className="w-4 h-4" />
-                Download CSV Template
+                CSV Template
+              </button>
+              <button
+                onClick={() => downloadTemplate('json')}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
+              >
+                <Download className="w-4 h-4" />
+                JSON Template
               </button>
               <label className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer font-medium">
                 <Upload className="w-4 h-4" />
-                Upload CSV File
+                Upload CSV/JSON
                 <input
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.json"
                   onChange={handleFileUpload}
                   className="hidden"
                 />
@@ -941,19 +1064,25 @@ Example with Loss:
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Paste your data (tab-delimited or comma-separated)
+                  Paste your data (CSV, tab-delimited, or JSON)
                 </label>
                 <textarea
                   value={pasteData}
                   onChange={(e) => setPasteData(e.target.value)}
-                  placeholder="1/1/2011	-620400.58
-1/22/2011	2606216.93	Distribution
-2/10/2011	-1932344.71	Additional Investment"
+                  placeholder={`CSV/Tab format:
+2024-01-01	-100000	Initial Investment
+2024-12-31	115000	Final Value
+
+JSON format:
+[
+  {"date": "2024-01-01", "amount": -100000, "description": "Initial Investment"},
+  {"date": "2024-12-31", "amount": 115000, "description": "Final Value"}
+]`}
                   rows={10}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm"
                 />
                 <p className="mt-2 text-xs text-slate-500">
-                  Format: Date [tab/comma] Amount [tab/comma] Description (optional)
+                  Supports CSV (Date,Amount,Description), tab-delimited, or JSON array format
                 </p>
               </div>
 
