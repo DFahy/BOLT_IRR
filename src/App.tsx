@@ -229,8 +229,10 @@ function App() {
   };
 
   const handleJSONImport = (jsonText: string) => {
+    console.log('handleJSONImport called, text length:', jsonText.length);
     try {
       const data = JSON.parse(jsonText);
+      console.log('JSON parsed successfully', data);
 
       // Check if this is an API request format
       if (data.calculations && Array.isArray(data.calculations)) {
@@ -341,15 +343,27 @@ function App() {
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('handleFileUpload called', event.target.files);
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('No file selected');
+      return;
+    }
+
+    console.log('File selected:', file.name, file.type, file.size);
 
     const reader = new FileReader();
+    reader.onerror = () => {
+      console.error('FileReader error');
+      setError('Error reading file. Please try again.');
+    };
     reader.onload = (e) => {
       const text = e.target?.result as string;
+      console.log('File content loaded, length:', text.length);
       try {
         // Check if this is a JSON file
         if (file.name.endsWith('.json')) {
+          console.log('Processing as JSON file');
           handleJSONImport(text);
           return;
         }
@@ -944,14 +958,19 @@ Example with Loss:
                 <Download className="w-4 h-4" />
                 JSON Template
               </button>
-              <label className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer font-medium">
+              <label
+                htmlFor="file-upload"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer font-medium"
+              >
                 <Upload className="w-4 h-4" />
                 Upload CSV/JSON
                 <input
+                  id="file-upload"
                   type="file"
                   accept=".csv,.json"
                   onChange={handleFileUpload}
                   className="hidden"
+                  onClick={(e) => console.log('File input clicked', e)}
                 />
               </label>
             </div>
