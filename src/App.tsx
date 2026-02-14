@@ -371,6 +371,7 @@ function App() {
       setError('');
       setResult(null);
     } catch (err) {
+      console.error('Error in handleJSONImport:', err);
       setError('Error parsing JSON file. Please check the format.');
     }
   };
