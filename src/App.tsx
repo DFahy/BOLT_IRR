@@ -257,6 +257,57 @@ function App() {
         return;
       }
 
+      // Handle format with dates[] and Flows[] arrays
+      if (data.dates && Array.isArray(data.dates) && (data.Flows || data.flows)) {
+        console.log('Detected dates/Flows format');
+        const flows = data.Flows || data.flows;
+        const dates = data.dates;
+
+        if (dates.length !== flows.length) {
+          setError('Dates and Flows arrays must have the same length.');
+          return;
+        }
+
+        const newFlows: FlowInput[] = dates.map((date: string, idx: number) => ({
+          id: Date.now().toString() + idx,
+          date: parseDateString(date),
+          amount: flows[idx]?.toString() || '',
+          description: ''
+        })).filter(f => f.date && f.amount);
+
+        // Handle windows for multi-period analysis
+        if (data.windows && Array.isArray(data.windows)) {
+          console.log('Processing windows data', data.windows);
+          const periods = data.windows.map((window: any, idx: number) => ({
+            id: `window-${idx}`,
+            label: `Period ${idx + 1}`,
+            startDate: parseDateString(window.start_date || window.startDate || ''),
+            endDate: parseDateString(window.end_date || window.endDate || ''),
+            startValue: window.start_market_value?.toString() || window.startMarketValue?.toString() || window.market_value?.toString() || window.marketValue?.toString() || '',
+            endValue: window.end_market_value?.toString() || window.endMarketValue?.toString() || ''
+          }));
+
+          setViewMode('multi-period');
+          setPeriodFlows(newFlows);
+          setPeriodValues({
+            startValues: [],
+            periods: periods
+          });
+        } else {
+          // Single period mode
+          if (viewMode === 'multi-period') {
+            setPeriodFlows(newFlows);
+          } else {
+            setFlows(newFlows);
+          }
+        }
+
+        setError('');
+        setResult(null);
+        console.log('Successfully imported', newFlows.length, 'cash flows');
+        return;
+      }
+
       // Original format handling
       let cashFlowData: any[] = [];
       let periodValuesData: PeriodValues | null = null;
@@ -269,7 +320,7 @@ function App() {
           periodValuesData = data.periodValues;
         }
       } else {
-        setError('Invalid JSON format. Expected array of cash flows or object with cashFlows property.');
+        setError('Invalid JSON format. Expected dates/Flows arrays or cashFlows array.');
         return;
       }
 
