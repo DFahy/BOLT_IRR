@@ -231,7 +231,35 @@ function App() {
   const handleJSONImport = (jsonText: string) => {
     console.log('handleJSONImport called, text length:', jsonText.length);
     try {
-      const data = JSON.parse(jsonText);
+      let data;
+      try {
+        // Try standard JSON parsing first
+        data = JSON.parse(jsonText);
+      } catch (firstError) {
+        // If that fails, try to fix common JSON issues
+        console.log('Standard JSON parse failed, attempting to fix common issues...');
+
+        // Fix common issues:
+        // 1. Single quotes to double quotes
+        // 2. Unquoted keys
+        // 3. Trailing commas
+        let fixedJson = jsonText
+          // Replace single quotes with double quotes (but not within double-quoted strings)
+          .replace(/'/g, '"')
+          // Remove trailing commas before closing braces/brackets
+          .replace(/,(\s*[}\]])/g, '$1')
+          // Try to quote unquoted keys (simple approach)
+          .replace(/(\{|\,)\s*([a-zA-Z_][a-zA-Z0-9_-]*)\s*:/g, '$1"$2":');
+
+        try {
+          data = JSON.parse(fixedJson);
+          console.log('JSON parsed successfully after fixes');
+        } catch (secondError) {
+          // If still failing, provide helpful error message
+          const errorMsg = firstError instanceof Error ? firstError.message : String(firstError);
+          throw new Error(`Invalid JSON format: ${errorMsg}. Please ensure:\n- Property names are in "double quotes"\n- Strings use "double quotes"\n- No trailing commas\n- Valid JSON syntax`);
+        }
+      }
       console.log('JSON parsed successfully', data);
 
       // Check if this is an API request format
@@ -372,7 +400,8 @@ function App() {
       setResult(null);
     } catch (err) {
       console.error('Error in handleJSONImport:', err);
-      setError('Error parsing JSON file. Please check the format.');
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Error parsing JSON: ${errorMsg}`);
     }
   };
 
