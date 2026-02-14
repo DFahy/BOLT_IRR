@@ -268,24 +268,41 @@ function App() {
           return;
         }
 
-        const newFlows: FlowInput[] = dates.map((date: string, idx: number) => ({
+        // Helper to parse date (handles both number and string formats)
+        const parseDate = (date: any): string => {
+          if (typeof date === 'number') {
+            return parseAPIDate(date);
+          }
+          return parseDateString(date);
+        };
+
+        const newFlows: FlowInput[] = dates.map((date: any, idx: number) => ({
           id: Date.now().toString() + idx,
-          date: parseDateString(date),
+          date: parseDate(date),
           amount: flows[idx]?.toString() || '',
           description: ''
         })).filter(f => f.date && f.amount);
 
+        console.log('Parsed flows:', newFlows);
+
         // Handle windows for multi-period analysis
         if (data.windows && Array.isArray(data.windows)) {
           console.log('Processing windows data', data.windows);
-          const periods = data.windows.map((window: any, idx: number) => ({
-            id: `window-${idx}`,
-            label: `Period ${idx + 1}`,
-            startDate: parseDateString(window.start_date || window.startDate || ''),
-            endDate: parseDateString(window.end_date || window.endDate || ''),
-            startValue: window.start_market_value?.toString() || window.startMarketValue?.toString() || window.market_value?.toString() || window.marketValue?.toString() || '',
-            endValue: window.end_market_value?.toString() || window.endMarketValue?.toString() || ''
-          }));
+          const periods = data.windows.map((window: any, idx: number) => {
+            const startDateRaw = window['start-date'] || window.start_date || window.startDate;
+            const endDateRaw = window['end-date'] || window.end_date || window.endDate;
+
+            return {
+              id: `window-${window['window-id'] || window.windowId || idx}`,
+              label: `Period ${idx + 1}`,
+              startDate: typeof startDateRaw === 'number' ? parseAPIDate(startDateRaw) : parseDateString(startDateRaw || ''),
+              endDate: typeof endDateRaw === 'number' ? parseAPIDate(endDateRaw) : parseDateString(endDateRaw || ''),
+              startValue: (window['start-market-value'] || window.start_market_value || window.startMarketValue || window.market_value || window.marketValue || 0).toString(),
+              endValue: (window['end-market-value'] || window.end_market_value || window.endMarketValue || 0).toString()
+            };
+          });
+
+          console.log('Parsed periods:', periods);
 
           setViewMode('multi-period');
           setPeriodFlows(newFlows);
