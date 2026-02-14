@@ -237,27 +237,56 @@ function App() {
         data = JSON.parse(jsonText);
       } catch (firstError) {
         // If that fails, try to fix common JSON issues
-        console.log('Standard JSON parse failed, attempting to fix common issues...');
+        console.log('Standard JSON parse failed, attempting to fix common issues...', firstError);
 
-        // Fix common issues:
-        // 1. Single quotes to double quotes
-        // 2. Unquoted keys
-        // 3. Trailing commas
-        let fixedJson = jsonText
-          // Replace single quotes with double quotes (but not within double-quoted strings)
-          .replace(/'/g, '"')
-          // Remove trailing commas before closing braces/brackets
-          .replace(/,(\s*[}\]])/g, '$1')
-          // Try to quote unquoted keys (simple approach)
-          .replace(/(\{|\,)\s*([a-zA-Z_][a-zA-Z0-9_-]*)\s*:/g, '$1"$2":');
+        // Try multiple fixing strategies
+        const fixingStrategies = [
+          // Strategy 1: Remove trailing commas
+          (text: string) => text.replace(/,(\s*[}\]])/g, '$1'),
 
-        try {
-          data = JSON.parse(fixedJson);
-          console.log('JSON parsed successfully after fixes');
-        } catch (secondError) {
-          // If still failing, provide helpful error message
+          // Strategy 2: Fix single quotes (but be careful not to break existing strings)
+          (text: string) => text.replace(/:\s*'([^']*)'/g, ': "$1"').replace(/{\s*'([^']*)'\s*:/g, '{"$1":'),
+
+          // Strategy 3: Quote unquoted keys
+          (text: string) => text.replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$-]*)\s*:/g, '$1"$2":'),
+
+          // Strategy 4: All fixes combined
+          (text: string) => {
+            return text
+              .replace(/,(\s*[}\]])/g, '$1')  // Remove trailing commas
+              .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$-]*)\s*:/g, '$1"$2":')  // Quote keys
+              .replace(/:\s*'([^']*)'/g, ': "$1"');  // Fix single-quoted values
+          }
+        ];
+
+        let parsed = false;
+        for (let i = 0; i < fixingStrategies.length && !parsed; i++) {
+          try {
+            const fixedJson = fixingStrategies[i](jsonText);
+            data = JSON.parse(fixedJson);
+            console.log(`JSON parsed successfully using strategy ${i + 1}`);
+            parsed = true;
+          } catch (strategyError) {
+            console.log(`Strategy ${i + 1} failed:`, strategyError);
+          }
+        }
+
+        if (!parsed) {
+          // If all strategies fail, provide helpful error message
           const errorMsg = firstError instanceof Error ? firstError.message : String(firstError);
-          throw new Error(`Invalid JSON format: ${errorMsg}. Please ensure:\n- Property names are in "double quotes"\n- Strings use "double quotes"\n- No trailing commas\n- Valid JSON syntax`);
+          console.error('All JSON parsing strategies failed. Original error:', errorMsg);
+
+          // Try to give a more specific error message based on the error
+          let helpfulMsg = 'Invalid JSON format. ';
+          if (errorMsg.includes('property name')) {
+            helpfulMsg += 'Property names must be in "double quotes". Example: {"key": "value"}';
+          } else if (errorMsg.includes('Unexpected token')) {
+            helpfulMsg += 'Check for: missing commas, extra commas, unquoted strings, or invalid characters.';
+          } else {
+            helpfulMsg += errorMsg;
+          }
+
+          throw new Error(helpfulMsg);
         }
       }
       console.log('JSON parsed successfully', data);
