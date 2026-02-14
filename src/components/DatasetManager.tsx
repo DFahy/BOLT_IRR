@@ -17,13 +17,6 @@ interface CashFlowData {
   description: string;
 }
 
-interface StartValue {
-  id: string;
-  date: string;
-  value: string;
-  label?: string;
-}
-
 interface Period {
   id: string;
   label: string;
@@ -34,7 +27,6 @@ interface Period {
 }
 
 interface PeriodValues {
-  startValues: StartValue[];
   periods: Period[];
 }
 

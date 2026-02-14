@@ -9,13 +9,6 @@ interface FlowInput {
   description: string;
 }
 
-interface StartValue {
-  id: string;
-  date: string;
-  value: string;
-  label?: string;
-}
-
 interface Period {
   id: string;
   label: string;
@@ -26,7 +19,6 @@ interface Period {
 }
 
 interface PeriodValues {
-  startValues: StartValue[];
   periods: Period[];
 }
 
@@ -55,34 +47,6 @@ export function MultiPeriodInput({
 }: MultiPeriodInputProps) {
   const [showResults, setShowResults] = useState(false);
 
-  const addStartValue = () => {
-    const newStartValue: StartValue = {
-      id: Date.now().toString(),
-      date: '',
-      value: '',
-      label: ''
-    };
-    setPeriodValues({
-      ...periodValues,
-      startValues: [...periodValues.startValues, newStartValue]
-    });
-  };
-
-  const removeStartValue = (id: string) => {
-    setPeriodValues({
-      ...periodValues,
-      startValues: periodValues.startValues.filter(sv => sv.id !== id)
-    });
-  };
-
-  const updateStartValue = (id: string, field: keyof StartValue, value: string) => {
-    setPeriodValues({
-      ...periodValues,
-      startValues: periodValues.startValues.map(sv =>
-        sv.id === id ? { ...sv, [field]: value } : sv
-      )
-    });
-  };
 
   const addFlow = () => {
     setFlows([...flows, {
@@ -180,74 +144,9 @@ export function MultiPeriodInput({
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h2 className="text-xl font-semibold text-slate-800">Start Values</h2>
-            <p className="text-sm text-slate-600 mt-1">
-              Define portfolio values at different points in time. The system will automatically match these to your analysis periods.
-            </p>
-          </div>
-          <button
-            onClick={addStartValue}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            Add Start Value
-          </button>
-        </div>
-
-        {periodValues.startValues.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 bg-slate-50 rounded-lg">
-            <p>No start values defined. Click "Add Start Value" to define portfolio values at different dates.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="grid grid-cols-12 gap-3 text-sm font-medium text-slate-600 px-2">
-              <div className="col-span-3">Date</div>
-              <div className="col-span-3">Value</div>
-              <div className="col-span-5">Label (optional)</div>
-              <div className="col-span-1"></div>
-            </div>
-
-            {periodValues.startValues.map((startValue) => (
-              <div key={startValue.id} className="grid grid-cols-12 gap-3 items-center">
-                <input
-                  type="date"
-                  value={startValue.date}
-                  onChange={(e) => updateStartValue(startValue.id, 'date', e.target.value)}
-                  className="col-span-3 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
-                <input
-                  type="number"
-                  step="0.01"
-                  value={startValue.value}
-                  onChange={(e) => updateStartValue(startValue.id, 'value', e.target.value)}
-                  placeholder="Portfolio Value"
-                  className="col-span-3 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
-                <input
-                  type="text"
-                  value={startValue.label || ''}
-                  onChange={(e) => updateStartValue(startValue.id, 'label', e.target.value)}
-                  placeholder="e.g., January Start"
-                  className="col-span-5 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
-                <button
-                  onClick={() => removeStartValue(startValue.id)}
-                  className="col-span-1 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
             <h2 className="text-xl font-semibold text-slate-800">Analysis Periods</h2>
             <p className="text-sm text-slate-600 mt-1">
-              Define custom time periods to analyze your portfolio performance. Start values will be automatically matched based on the start date.
+              Define custom time periods to analyze your portfolio performance.
             </p>
           </div>
           <button
@@ -261,33 +160,6 @@ export function MultiPeriodInput({
 
         <div className="space-y-4">
           {periodValues.periods.map((period, index) => {
-            const findStartValueForDate = (startDateStr: string): string => {
-              if (!startDateStr || periodValues.startValues.length === 0) return '';
-
-              const targetDate = new Date(startDateStr);
-
-              const sortedStartValues = [...periodValues.startValues].sort((a, b) =>
-                new Date(a.date).getTime() - new Date(b.date).getTime()
-              );
-
-              let matchingValue = sortedStartValues.find(sv =>
-                new Date(sv.date).getTime() === targetDate.getTime()
-              );
-
-              if (!matchingValue) {
-                for (let i = sortedStartValues.length - 1; i >= 0; i--) {
-                  if (new Date(sortedStartValues[i].date).getTime() <= targetDate.getTime()) {
-                    matchingValue = sortedStartValues[i];
-                    break;
-                  }
-                }
-              }
-
-              return matchingValue?.value || '';
-            };
-
-            const autoStartValue = findStartValueForDate(period.startDate);
-
             return (
             <div
               key={period.id}
@@ -325,16 +197,15 @@ export function MultiPeriodInput({
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Start Value {autoStartValue && <span className="text-green-600">(Auto)</span>}
+                      Start Value
                     </label>
                     <input
                       type="number"
                       step="0.01"
-                      value={period.startValue || autoStartValue}
+                      value={period.startValue}
                       onChange={(e) => updatePeriod(period.id, 'startValue', e.target.value)}
-                      placeholder={autoStartValue || "Auto-matched"}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-green-50"
-                      title={autoStartValue ? `Auto-matched from start values: ${autoStartValue}` : 'Will auto-match when start values are defined'}
+                      placeholder="100000"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                   <div>

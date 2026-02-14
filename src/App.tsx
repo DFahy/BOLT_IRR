@@ -13,13 +13,6 @@ interface FlowInput {
   description: string;
 }
 
-interface StartValue {
-  id: string;
-  date: string;
-  value: string;
-  label?: string;
-}
-
 interface Period {
   id: string;
   label: string;
@@ -30,7 +23,6 @@ interface Period {
 }
 
 interface PeriodValues {
-  startValues: StartValue[];
   periods: Period[];
 }
 
@@ -57,7 +49,6 @@ function App() {
     tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
 
     return {
-      startValues: [],
       periods: [
         { id: '1', label: '1 Year', startDate: oneYearAgo.toISOString().split('T')[0], endDate: today, startValue: '', endValue: '' },
         { id: '2', label: '5 Years', startDate: fiveYearsAgo.toISOString().split('T')[0], endDate: today, startValue: '', endValue: '' },
@@ -81,30 +72,6 @@ function App() {
       description: f.description
     }));
 
-  const findStartValueForDate = (startDateStr: string): string => {
-    if (!startDateStr || periodValues.startValues.length === 0) return '';
-
-    const targetDate = new Date(startDateStr);
-
-    const sortedStartValues = [...periodValues.startValues].sort((a, b) =>
-      new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    let matchingValue = sortedStartValues.find(sv =>
-      new Date(sv.date).getTime() === targetDate.getTime()
-    );
-
-    if (!matchingValue) {
-      for (let i = sortedStartValues.length - 1; i >= 0; i--) {
-        if (new Date(sortedStartValues[i].date).getTime() <= targetDate.getTime()) {
-          matchingValue = sortedStartValues[i];
-          break;
-        }
-      }
-    }
-
-    return matchingValue?.value || '';
-  };
 
   const buildPeriodCashFlows = (startDateStr: string, endDateStr: string, startValue: string, endValue: string): CashFlow[] => {
     if (!startDateStr || !endDateStr || !endValue) return [];
@@ -217,7 +184,6 @@ function App() {
     setViewMode('multi-period');
     setPeriodFlows(newFlows);
     setPeriodValues({
-      startValues: [],
       periods: newPeriods
     });
 
@@ -505,10 +471,8 @@ function App() {
 
         if (viewMode === 'multi-period' && hasMultiPeriodSections) {
           // Parse multi-section template format
-          const startValues: StartValue[] = [];
           const periods: Period[] = [];
 
-          let inStartValuesSection = false;
           let inPeriodSection = false;
           let inCashFlowSection = false;
 
@@ -516,48 +480,19 @@ function App() {
             const trimmedLine = line.trim();
 
             // Toggle sections
-            if (trimmedLine.includes('Start Values:')) {
-              inStartValuesSection = true;
-              inPeriodSection = false;
-              inCashFlowSection = false;
-              continue;
-            }
             if (trimmedLine.includes('Period Definitions:')) {
-              inStartValuesSection = false;
               inPeriodSection = true;
               inCashFlowSection = false;
               continue;
             }
             if (trimmedLine.includes('Intermediate Cash Flows')) {
-              inStartValuesSection = false;
               inPeriodSection = false;
               inCashFlowSection = true;
               continue;
             }
 
             // Skip headers
-            if (trimmedLine.startsWith('Period Label,') || trimmedLine.startsWith('Date,')) {
-              continue;
-            }
-
-            // Parse start values section
-            if (inStartValuesSection) {
-              const parts = trimmedLine.split(',');
-
-              if (parts.length >= 2) {
-                const date = parseDateString(parts[0].trim());
-                const value = parts[1].trim().replace(/[^0-9.-]/g, '');
-                const label = parts.length > 2 ? parts[2].trim() : '';
-
-                if (date && value && !isNaN(parseFloat(value))) {
-                  startValues.push({
-                    id: Date.now().toString() + startValues.length,
-                    date,
-                    value,
-                    label
-                  });
-                }
-              }
+            if (trimmedLine.startsWith('Period Label,')) {
               continue;
             }
 
@@ -565,11 +500,12 @@ function App() {
             if (inPeriodSection) {
               const parts = trimmedLine.split(',');
 
-              if (parts.length >= 4) {
+              if (parts.length >= 5) {
                 const label = parts[0].trim();
                 const startDate = parseDateString(parts[1].trim());
                 const endDate = parseDateString(parts[2].trim());
-                const endValue = parts[3].trim().replace(/[^0-9.-]/g, '');
+                const startValue = parts[3].trim().replace(/[^0-9.-]/g, '');
+                const endValue = parts[4].trim().replace(/[^0-9.-]/g, '');
 
                 if (startDate && endDate) {
                   periods.push({
@@ -577,7 +513,7 @@ function App() {
                     label,
                     startDate,
                     endDate,
-                    startValue: '',
+                    startValue,
                     endValue
                   });
                 }
@@ -611,7 +547,6 @@ function App() {
 
           // Build extracted period values
           extractedPeriodValues = {
-            startValues: startValues.length > 0 ? startValues : [],
             periods: periods.length > 0 ? periods : periodValues.periods
           };
         } else {
@@ -656,13 +591,8 @@ function App() {
       if (viewMode === 'multi-period') {
         jsonContent = {
           periodValues: {
-            startValues: [
-              { date: '2024-01-01', value: '100000', label: 'January Start' },
-              { date: '2024-02-01', value: '105000', label: 'February Start' },
-              { date: '2024-03-01', value: '108000', label: 'March Start' }
-            ],
             periods: [
-              { label: '1 Year', startDate: '2024-01-01', endDate: '2024-12-31', endValue: '115000' }
+              { label: '1 Year', startDate: '2024-01-01', endDate: '2024-12-31', startValue: '100000', endValue: '115000' }
             ]
           },
           cashFlows: [
@@ -694,30 +624,19 @@ function App() {
     let csvContent: string;
 
     if (viewMode === 'multi-period') {
-      const startValueLines = periodValues.startValues.length > 0
-        ? periodValues.startValues.map(sv => `${sv.date},${sv.value},${sv.label || ''}`).join('\n')
-        : `2024-01-01,100000,January Start
-2024-02-01,105000,February Start
-2024-03-01,108000,March Start`;
-
       const periodLines = periodValues.periods.map(p =>
-        `${p.label},${p.startDate || '2024-01-01'},${p.endDate || '2024-12-31'},${p.endValue || '115000'}`
+        `${p.label},${p.startDate || '2024-01-01'},${p.endDate || '2024-12-31'},${p.startValue || '100000'},${p.endValue || '115000'}`
       ).join('\n');
 
       csvContent = `MULTI-PERIOD XIRR TEMPLATE
 
 Instructions:
-1. Define all your start values (portfolio values at different points in time)
-2. Define your analysis periods - the system will automatically match start values based on the start date
-3. Add intermediate cash flows (contributions, distributions, etc.) with dates
-4. Upload or paste this file - all values will be automatically populated!
-
-Start Values:
-Date,Value,Label
-${startValueLines}
+1. Define your analysis periods with start dates, end dates, start values, and end values
+2. Add intermediate cash flows (contributions, distributions, etc.) with dates
+3. Upload or paste this file - all values will be automatically populated!
 
 Period Definitions:
-Period Label,Start Date,End Date,End Value
+Period Label,Start Date,End Date,Start Value,End Value
 ${periodLines}
 
 Intermediate Cash Flows:
@@ -819,10 +738,8 @@ Example with Loss:
 
       if (viewMode === 'multi-period' && hasMultiPeriodSections) {
         // Parse multi-section template format
-        const startValues: StartValue[] = [];
         const periods: Period[] = [];
 
-        let inStartValuesSection = false;
         let inPeriodSection = false;
         let inCashFlowSection = false;
 
@@ -830,53 +747,19 @@ Example with Loss:
           const trimmedLine = line.trim();
 
           // Toggle sections
-          if (trimmedLine.includes('Start Values:')) {
-            inStartValuesSection = true;
-            inPeriodSection = false;
-            inCashFlowSection = false;
-            continue;
-          }
           if (trimmedLine.includes('Period Definitions:')) {
-            inStartValuesSection = false;
             inPeriodSection = true;
             inCashFlowSection = false;
             continue;
           }
           if (trimmedLine.includes('Intermediate Cash Flows')) {
-            inStartValuesSection = false;
             inPeriodSection = false;
             inCashFlowSection = true;
             continue;
           }
 
           // Skip headers
-          if (trimmedLine.startsWith('Period Label,') || trimmedLine.startsWith('Date,') || trimmedLine.includes('Date,Value,Label')) {
-            continue;
-          }
-
-          // Parse start values section
-          if (inStartValuesSection) {
-            let parts: string[];
-            if (trimmedLine.includes('\t')) {
-              parts = trimmedLine.split('\t');
-            } else {
-              parts = trimmedLine.split(',');
-            }
-
-            if (parts.length >= 2) {
-              const date = parseDateString(parts[0].trim());
-              const value = parts[1].trim().replace(/[^0-9.-]/g, '');
-              const label = parts.length > 2 ? parts[2].trim() : '';
-
-              if (date && value && !isNaN(parseFloat(value))) {
-                startValues.push({
-                  id: Date.now().toString() + startValues.length,
-                  date,
-                  value,
-                  label
-                });
-              }
-            }
+          if (trimmedLine.startsWith('Period Label,')) {
             continue;
           }
 
@@ -889,11 +772,12 @@ Example with Loss:
               parts = trimmedLine.split(',');
             }
 
-            if (parts.length >= 4) {
+            if (parts.length >= 5) {
               const label = parts[0].trim();
               const startDate = parseDateString(parts[1].trim());
               const endDate = parseDateString(parts[2].trim());
-              const endValue = parts[3].trim().replace(/[^0-9.-]/g, '');
+              const startValue = parts[3].trim().replace(/[^0-9.-]/g, '');
+              const endValue = parts[4].trim().replace(/[^0-9.-]/g, '');
 
               if (startDate && endDate) {
                 periods.push({
@@ -901,7 +785,7 @@ Example with Loss:
                   label,
                   startDate,
                   endDate,
-                  startValue: '',
+                  startValue,
                   endValue
                 });
               }
@@ -940,7 +824,6 @@ Example with Loss:
 
         // Build extracted period values
         extractedPeriodValues = {
-          startValues: startValues.length > 0 ? startValues : [],
           periods: periods.length > 0 ? periods : periodValues.periods
         };
       } else {
