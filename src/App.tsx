@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Plus, Trash2, Calculator, Download, LogOut, ClipboardPaste, X, BarChart3, TrendingUp } from 'lucide-react';
+import { Upload, Plus, Trash2, Calculator, Download, LogOut, ClipboardPaste, X, BarChart3, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { CashFlow, calculateXIRR, parseCSV, XIRRResult } from './utils/xirr';
 import { useAuth } from './lib/AuthContext';
 import { Auth } from './components/Auth';
@@ -63,6 +63,7 @@ function App() {
   const [showCalcSelector, setShowCalcSelector] = useState(false);
   const [availableCalcs, setAvailableCalcs] = useState<any[]>([]);
   const [apiData, setApiData] = useState<any>(null);
+  const [cashFlowsExpanded, setCashFlowsExpanded] = useState(true);
 
   const cashFlows: CashFlow[] = flows
     .filter(f => f.date && f.amount)
@@ -989,7 +990,20 @@ Example with Loss:
               <>
                 <div className="mb-8">
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold text-slate-800">Cash Flows</h2>
+                    <div className="flex items-center gap-3 flex-1">
+                      <button
+                        onClick={() => setCashFlowsExpanded(!cashFlowsExpanded)}
+                        className="p-1 hover:bg-slate-100 rounded transition-colors"
+                        title={cashFlowsExpanded ? "Collapse section" : "Expand section"}
+                      >
+                        {cashFlowsExpanded ? (
+                          <ChevronUp className="w-5 h-5 text-slate-600" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-slate-600" />
+                        )}
+                      </button>
+                      <h2 className="text-xl font-semibold text-slate-800">Cash Flows</h2>
+                    </div>
                     <button
                       onClick={addFlow}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
@@ -999,6 +1013,8 @@ Example with Loss:
                     </button>
                   </div>
 
+              {cashFlowsExpanded && (
+              <>
               <div className="space-y-3">
                 <div className="grid grid-cols-12 gap-3 text-sm font-medium text-slate-600 px-2">
                   <div className="col-span-3">Date</div>
@@ -1058,6 +1074,8 @@ Example with Loss:
                   </ul>
                 </div>
               </div>
+              </>
+              )}
             </div>
 
                 <button

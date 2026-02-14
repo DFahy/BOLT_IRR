@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, TrendingUp, Calendar, AlertCircle, DollarSign, GitCompare, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, Calendar, AlertCircle, DollarSign, GitCompare, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { CashFlow, calculateXIRR, XIRRResult } from '../utils/xirr';
 
 interface FlowInput {
@@ -46,7 +46,8 @@ export function MultiPeriodInput({
   buildPeriodCashFlows
 }: MultiPeriodInputProps) {
   const [showResults, setShowResults] = useState(false);
-
+  const [periodsExpanded, setPeriodsExpanded] = useState(true);
+  const [cashFlowsExpanded, setCashFlowsExpanded] = useState(true);
 
   const addFlow = () => {
     setFlows([...flows, {
@@ -143,11 +144,24 @@ export function MultiPeriodInput({
     <div className="space-y-8">
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-800">Analysis Periods</h2>
-            <p className="text-sm text-slate-600 mt-1">
-              Define custom time periods to analyze your portfolio performance.
-            </p>
+          <div className="flex items-center gap-3 flex-1">
+            <button
+              onClick={() => setPeriodsExpanded(!periodsExpanded)}
+              className="p-1 hover:bg-slate-100 rounded transition-colors"
+              title={periodsExpanded ? "Collapse section" : "Expand section"}
+            >
+              {periodsExpanded ? (
+                <ChevronUp className="w-5 h-5 text-slate-600" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-slate-600" />
+              )}
+            </button>
+            <div>
+              <h2 className="text-xl font-semibold text-slate-800">Analysis Periods</h2>
+              <p className="text-sm text-slate-600 mt-1">
+                Define custom time periods to analyze your portfolio performance.
+              </p>
+            </div>
           </div>
           <button
             onClick={addPeriod}
@@ -158,6 +172,7 @@ export function MultiPeriodInput({
           </button>
         </div>
 
+        {periodsExpanded && (
         <div className="space-y-4">
           {periodValues.periods.map((period, index) => {
             return (
@@ -233,15 +248,29 @@ export function MultiPeriodInput({
           );
           })}
         </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-800">Intermediate Cash Flows</h2>
-            <p className="text-sm text-slate-600 mt-1">
-              Add any contributions, withdrawals, dividends, or distributions that occurred during the periods
-            </p>
+          <div className="flex items-center gap-3 flex-1">
+            <button
+              onClick={() => setCashFlowsExpanded(!cashFlowsExpanded)}
+              className="p-1 hover:bg-slate-100 rounded transition-colors"
+              title={cashFlowsExpanded ? "Collapse section" : "Expand section"}
+            >
+              {cashFlowsExpanded ? (
+                <ChevronUp className="w-5 h-5 text-slate-600" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-slate-600" />
+              )}
+            </button>
+            <div>
+              <h2 className="text-xl font-semibold text-slate-800">Intermediate Cash Flows</h2>
+              <p className="text-sm text-slate-600 mt-1">
+                Add any contributions, withdrawals, dividends, or distributions that occurred during the periods
+              </p>
+            </div>
           </div>
           <button
             onClick={addFlow}
@@ -252,6 +281,8 @@ export function MultiPeriodInput({
           </button>
         </div>
 
+        {cashFlowsExpanded && (
+        <>
         {flows.length === 0 ? (
           <div className="text-center py-8 text-slate-500 bg-slate-50 rounded-lg">
             <p>No intermediate cash flows. Click "Add Flow" to add contributions, distributions, etc.</p>
@@ -308,6 +339,8 @@ export function MultiPeriodInput({
             <li>The system will automatically include these flows in the relevant periods</li>
           </ul>
         </div>
+        </>
+        )}
       </div>
 
       <button
