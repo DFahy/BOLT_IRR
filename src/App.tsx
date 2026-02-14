@@ -69,6 +69,9 @@ function App() {
   const [error, setError] = useState<string>('');
   const [showPasteDialog, setShowPasteDialog] = useState(false);
   const [pasteData, setPasteData] = useState('');
+  const [showCalcSelector, setShowCalcSelector] = useState(false);
+  const [availableCalcs, setAvailableCalcs] = useState<any[]>([]);
+  const [apiData, setApiData] = useState<any>(null);
 
   const cashFlows: CashFlow[] = flows
     .filter(f => f.date && f.amount)
@@ -172,11 +175,83 @@ function App() {
     setFlows(flows.map(f => f.id === id ? { ...f, [field]: value } : f));
   };
 
+  const parseAPIDate = (dateNum: number): string => {
+    const dateStr = dateNum.toString();
+    const year = dateStr.substring(0, 4);
+    const month = dateStr.substring(4, 6);
+    const day = dateStr.substring(6, 8);
+    return `${year}-${month}-${day}`;
+  };
+
+  const importAPICalculation = (calc: any) => {
+    if (!calc || !calc.dates || !calc.flows || !calc.windows) {
+      setError('Invalid API format. Missing dates, flows, or windows.');
+      return;
+    }
+
+    // Convert dates and flows to cash flows
+    const newFlows: FlowInput[] = [];
+    for (let i = 0; i < calc.dates.length; i++) {
+      const date = parseAPIDate(calc.dates[i]);
+      const amount = calc.flows[i].toString();
+
+      newFlows.push({
+        id: `${Date.now()}-${i}`,
+        date,
+        amount,
+        description: amount.startsWith('-') ? 'Flow Out' : 'Flow In'
+      });
+    }
+
+    // Convert windows to periods
+    const newPeriods: Period[] = calc.windows.map((window: any) => ({
+      id: `window-${window['window-id']}`,
+      label: `Window ${window['window-id']}`,
+      startDate: parseAPIDate(window['start-date']),
+      endDate: parseAPIDate(window['end-date']),
+      startValue: window['start-market-value'].toString(),
+      endValue: window['end-market-value'].toString()
+    }));
+
+    // Switch to multi-period mode and populate data
+    setViewMode('multi-period');
+    setPeriodFlows(newFlows);
+    setPeriodValues({
+      startValues: [],
+      periods: newPeriods
+    });
+
+    setError('');
+    setResult(null);
+    setShowCalcSelector(false);
+  };
+
   const handleJSONImport = (jsonText: string) => {
     try {
       const data = JSON.parse(jsonText);
 
-      // Support both array format and object format
+      // Check if this is an API request format
+      if (data.calculations && Array.isArray(data.calculations)) {
+        // API format detected
+        if (data.calculations.length === 0) {
+          setError('No calculations found in API data.');
+          return;
+        }
+
+        // If multiple calculations, show selector
+        if (data.calculations.length > 1) {
+          setApiData(data);
+          setAvailableCalcs(data.calculations);
+          setShowCalcSelector(true);
+          return;
+        }
+
+        // Single calculation - import directly
+        importAPICalculation(data.calculations[0]);
+        return;
+      }
+
+      // Original format handling
       let cashFlowData: any[] = [];
       let periodValuesData: PeriodValues | null = null;
 
@@ -573,7 +648,7 @@ Example with Loss:
         return;
       }
 
-      // Check if this is JSON format
+      // Check if this is JSON format (including API format)
       if (trimmedData.startsWith('{') || trimmedData.startsWith('[')) {
         handleJSONImport(trimmedData);
         setShowPasteDialog(false);
@@ -1104,6 +1179,70 @@ JSON format:
                   Cancel
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCalcSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl p-6 max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-slate-800">Select Calculation</h3>
+              <button onClick={() => setShowCalcSelector(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-slate-600 mb-4">
+              Multiple calculations found in the API data. Select which one to import:
+            </p>
+
+            <div className="flex-1 overflow-y-auto space-y-3">
+              {availableCalcs.map((calc, index) => (
+                <div
+                  key={index}
+                  className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-slate-800 text-lg">{calc['calc-id']}</h4>
+                      <div className="mt-2 grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="text-slate-500">Cash Flows:</span>
+                          <span className="ml-2 font-semibold">{calc.dates?.length || 0}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">Windows:</span>
+                          <span className="ml-2 font-semibold">{calc.windows?.length || 0}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">Date Range:</span>
+                          <span className="ml-2 font-semibold text-xs">
+                            {calc.dates?.[0] ? parseAPIDate(calc.dates[0]) : 'N/A'} to{' '}
+                            {calc.dates?.[calc.dates.length - 1] ? parseAPIDate(calc.dates[calc.dates.length - 1]) : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => importAPICalculation(calc)}
+                      className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      Import
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-slate-200">
+              <button
+                onClick={() => setShowCalcSelector(false)}
+                className="w-full py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors font-medium"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

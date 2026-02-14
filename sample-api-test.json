@@ -1,0 +1,39 @@
+{
+  "request-id": "test-request",
+  "nan-value": -999.99,
+  "calculations": [
+    {
+      "calc-id": "Sample_Test_GrossOfFees",
+      "dates": [
+        20220101,
+        20220315,
+        20220630,
+        20221231
+      ],
+      "flows": [
+        -100000,
+        5000,
+        -10000,
+        125000
+      ],
+      "windows": [
+        {
+          "window-id": "1",
+          "start-date": 20220101,
+          "start-market-value": 0,
+          "end-date": 20221231,
+          "end-market-value": 125000,
+          "annualized": "at-least-one-year"
+        },
+        {
+          "window-id": "2",
+          "start-date": 20220101,
+          "start-market-value": 0,
+          "end-date": 20220630,
+          "end-market-value": 95000,
+          "annualized": "at-least-one-year"
+        }
+      ]
+    }
+  ]
+}
