@@ -32,6 +32,8 @@ interface MultiPeriodInputProps {
 
 interface PeriodResult {
   period: string;
+  startDate: string;
+  endDate: string;
   years: number;
   cashFlows: CashFlow[];
   result: XIRRResult | null;
@@ -119,6 +121,8 @@ export function MultiPeriodInput({
     if (cashFlows.length < 2) {
       return {
         period: p.label,
+        startDate: p.startDate,
+        endDate: p.endDate,
         years,
         cashFlows,
         result: null,
@@ -130,6 +134,8 @@ export function MultiPeriodInput({
     if (!result) {
       return {
         period: p.label,
+        startDate: p.startDate,
+        endDate: p.endDate,
         years,
         cashFlows,
         result: null,
@@ -137,7 +143,7 @@ export function MultiPeriodInput({
       };
     }
 
-    return { period: p.label, years, cashFlows, result };
+    return { period: p.label, startDate: p.startDate, endDate: p.endDate, years, cashFlows, result };
   });
 
   return (
@@ -372,6 +378,12 @@ export function MultiPeriodInput({
               ];
               const colorClass = colors[index % colors.length];
 
+              const formatDate = (dateStr: string) => {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+              };
+
               return (
               <div
                 key={periodResult.period}
@@ -382,6 +394,9 @@ export function MultiPeriodInput({
                     <Calendar className="w-5 h-5" />
                     {periodResult.period}
                   </h3>
+                  <p className="text-sm text-white/90 mt-1">
+                    {formatDate(periodResult.startDate)} - {formatDate(periodResult.endDate)}
+                  </p>
                 </div>
 
                 <div className="p-6">
