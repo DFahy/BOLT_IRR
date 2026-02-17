@@ -1007,7 +1007,7 @@ Example with Loss:
                 className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors font-medium"
               >
                 <Download className="w-4 h-4" />
-                Load Sample API
+                Download Sample API
               </button>
               <button
                 onClick={() => setShowPasteDialog(true)}
