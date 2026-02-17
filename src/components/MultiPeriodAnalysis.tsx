@@ -76,49 +76,46 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
         <p className="text-slate-600 mt-2">Compare returns across different time horizons</p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
         {periodResults.map((periodResult, index) => (
           <div
             key={periodResult.period}
-            className="bg-white rounded-xl shadow-lg overflow-hidden border-2 border-slate-200 hover:border-blue-300 transition-colors"
+            className="bg-white rounded-lg shadow overflow-hidden border border-slate-200 hover:border-blue-300 transition-colors"
           >
-            <div className={`p-4 ${
+            <div className={`px-2 py-1.5 ${
               index === 0 ? 'bg-gradient-to-br from-blue-500 to-blue-600' :
-              index === 1 ? 'bg-gradient-to-br from-indigo-500 to-indigo-600' :
+              index === 1 ? 'bg-gradient-to-br from-blue-500 to-blue-600' :
               'bg-gradient-to-br from-slate-600 to-slate-700'
             }`}>
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
+              <h3 className="text-xs font-bold text-white text-center">
                 {periodResult.period}
               </h3>
             </div>
 
-            <div className="p-6">
+            <div className="p-2">
               {periodResult.error ? (
-                <div className="flex items-start gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex items-start gap-1 p-2 bg-amber-50 border border-amber-200 rounded">
+                  <AlertCircle className="w-3 h-3 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-amber-800">Not Available</p>
-                    <p className="text-xs text-amber-700 mt-1">{periodResult.error}</p>
+                    <p className="text-[10px] font-medium text-amber-800">Not Available</p>
                   </div>
                 </div>
               ) : periodResult.result ? (
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-5 border border-green-200">
+                <div className="space-y-2">
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded p-2 border border-green-200 text-center">
                     {periodResult.result.totalDays < 365 ? (
                       <>
-                        <p className="text-sm text-slate-600 mb-1 font-medium">Simple Return (Non-Annualized)</p>
-                        <p className={`text-4xl font-bold ${
+                        <p className="text-[9px] text-slate-600 mb-0.5 font-medium">Simple Return</p>
+                        <p className={`text-xl font-bold ${
                           parseFloat(periodResult.result.simpleReturnPercent) >= 0 ? 'text-green-600' : 'text-red-600'
                         }`}>
                           {periodResult.result.simpleReturnPercent}%
                         </p>
-                        <p className="text-xs text-slate-500 mt-2">Period is less than 12 months</p>
                       </>
                     ) : (
                       <>
-                        <p className="text-sm text-slate-600 mb-1 font-medium">Annualized Return (XIRR)</p>
-                        <p className={`text-4xl font-bold ${
+                        <p className="text-[9px] text-slate-600 mb-0.5 font-medium">XIRR</p>
+                        <p className={`text-xl font-bold ${
                           parseFloat(periodResult.result.xirrPercent) >= 0 ? 'text-green-600' : 'text-red-600'
                         }`}>
                           {periodResult.result.xirrPercent}%
@@ -127,113 +124,20 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
                     )}
                   </div>
 
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-300 shadow-md">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-semibold text-blue-800 flex items-center gap-1">
-                        <GitCompare className="w-4 h-4" />
-                        Method Comparison
-                      </h4>
-                      {periodResult.result.hasDifference ? (
-                        <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-100 px-2 py-1 rounded">
-                          <AlertTriangle className="w-3 h-3" />
-                          Different
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Match
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="space-y-2 text-xs">
-                      <div className={`flex justify-between p-2 rounded ${
-                        periodResult.result.hasDifference ? 'bg-blue-100 border border-blue-300' : 'bg-white'
-                      }`}>
-                        <span className="font-medium text-slate-700">Newton-Raphson:</span>
-                        <span className="font-mono font-semibold text-slate-800">
-                          {periodResult.result.newtonRaphson.ratePercent}%
-                        </span>
-                      </div>
-
-                      <div className={`flex justify-between p-2 rounded ${
-                        periodResult.result.hasDifference ? 'bg-green-100 border border-green-300' : 'bg-white'
-                      }`}>
-                        <span className="font-medium text-slate-700">Brent's Method:</span>
-                        <span className="font-mono font-semibold text-slate-800">
-                          {periodResult.result.brent.ratePercent}%
-                        </span>
-                      </div>
-
-                      {periodResult.result.hasDifference && (
-                        <div className="flex justify-between p-2 bg-amber-50 border border-amber-200 rounded">
-                          <span className="font-medium text-amber-800">Difference:</span>
-                          <span className="font-mono font-semibold text-amber-900">
-                            {periodResult.result.differencePercent}%
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
-                        <div className="text-center">
-                          <p className="text-[10px] text-slate-500">Iterations</p>
-                          <p className="font-semibold text-slate-700">
-                            {periodResult.result.newtonRaphson.iterations} / {periodResult.result.brent.iterations}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[10px] text-slate-500">Convergence</p>
-                          <p className="font-semibold text-slate-700">
-                            {periodResult.result.newtonRaphson.converged ? '✓' : '✗'} / {periodResult.result.brent.converged ? '✓' : '✗'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                      <span className="text-slate-600 flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        Time Period
-                      </span>
+                  <div className="space-y-1 text-[10px]">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-600">Days</span>
                       <span className="font-semibold text-slate-800">
-                        {periodResult.result.totalDays} days
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                      <span className="text-slate-600 flex items-center gap-1">
-                        <DollarSign className="w-4 h-4" />
-                        Net Cash Flow
-                      </span>
-                      <span className={`font-semibold ${
-                        periodResult.result.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        ${periodResult.result.netCashFlow.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2
-                        })}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                      <span className="text-slate-600">Total Invested</span>
-                      <span className="font-semibold text-red-600">
-                        ${periodResult.result.totalOutflows.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2
-                        })}
+                        {periodResult.result.totalDays}
                       </span>
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-600">Total Returns</span>
-                      <span className="font-semibold text-green-600">
-                        ${periodResult.result.totalInflows.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2
-                        })}
+                      <span className="text-slate-600">Net</span>
+                      <span className={`font-semibold ${
+                        periodResult.result.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        ${(periodResult.result.netCashFlow / 1000).toFixed(0)}k
                       </span>
                     </div>
                   </div>
