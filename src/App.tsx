@@ -32,6 +32,19 @@ interface APIMetadata {
   scorecard: string;
 }
 
+const extractCalcType = (calcId: string): string => {
+  // Extract the calculation type from calc-id
+  // Example: "1016415.GrossOfFees" -> "Gross of Fees"
+  // Example: "1016415.NetOfFees" -> "Net of Fees"
+  const parts = calcId.split('.');
+  if (parts.length > 1) {
+    const type = parts[1];
+    // Convert camelCase to readable format
+    return type.replace(/([A-Z])/g, ' $1').trim();
+  }
+  return calcId;
+};
+
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('simple');
   const [flows, setFlows] = useState<FlowInput[]>([
@@ -68,6 +81,8 @@ function App() {
   const [availableCalcs, setAvailableCalcs] = useState<any[]>([]);
   const [apiData, setApiData] = useState<any>(null);
   const [cashFlowsExpanded, setCashFlowsExpanded] = useState(true);
+  const [selectedCalcType, setSelectedCalcType] = useState<string>('');
+  const [loadedCalculations, setLoadedCalculations] = useState<any[]>([]);
 
   const cashFlows: CashFlow[] = flows
     .filter(f => f.date && f.amount)
@@ -147,6 +162,10 @@ function App() {
   };
 
   const importAPICalculation = (calc: any) => {
+    console.log('Importing calculation:', calc['calc-id']);
+    const calcType = extractCalcType(calc['calc-id']);
+    setSelectedCalcType(calcType);
+
     if (!calc || !calc.dates || !calc.flows || !calc.windows) {
       setError('Invalid API format. Missing dates, flows, or windows.');
       return;
@@ -234,28 +253,31 @@ function App() {
           }
         }
 
-        // Filter for GrossOfFees calculations only
-        const grossOfFeesCalcs = data.calculations.filter((calc: any) =>
-          calc['calc-id'] && calc['calc-id'].includes('GrossOfFees')
-        );
+        // Load ALL calculations
+        const allCalcs = data.calculations.filter((calc: any) => calc['calc-id']);
 
-        if (grossOfFeesCalcs.length === 0) {
-          setError('No GrossOfFees calculations found in API data.');
+        if (allCalcs.length === 0) {
+          setError('No calculations found in API data.');
           return;
         }
 
-        // If multiple GrossOfFees calculations, show selector
-        if (grossOfFeesCalcs.length > 1) {
-          setApiData(data);
-          setAvailableCalcs(grossOfFeesCalcs);
+        // Store all calculations
+        setLoadedCalculations(allCalcs);
+        setApiData(data);
+
+        // If multiple calculations, show selector
+        if (allCalcs.length > 1) {
+          setAvailableCalcs(allCalcs);
           setShowCalcSelector(true);
           setError('');
           return;
         }
 
         // Single calculation - import directly
-        importAPICalculation(grossOfFeesCalcs[0]);
-        alert(`API data imported successfully!\n${grossOfFeesCalcs[0]['calc-id']}\n${grossOfFeesCalcs[0].dates?.length || 0} cash flows, ${grossOfFeesCalcs[0].windows?.length || 0} windows`);
+        const calcType = extractCalcType(allCalcs[0]['calc-id']);
+        setSelectedCalcType(calcType);
+        importAPICalculation(allCalcs[0]);
+        alert(`API data imported successfully!\n${allCalcs[0]['calc-id']}\n${allCalcs[0].dates?.length || 0} cash flows, ${allCalcs[0].windows?.length || 0} windows`);
         return;
       }
 
@@ -881,7 +903,7 @@ Example with Loss:
             {apiMetadata && (
               <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <h3 className="text-sm font-semibold text-blue-900 mb-2">API Data Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4">
                   <div>
                     <span className="text-slate-600 font-medium">Request ID:</span>
                     <span className="ml-2 text-slate-800 font-mono text-xs">{apiMetadata.requestId}</span>
@@ -895,6 +917,42 @@ Example with Loss:
                     <span className="ml-2 text-slate-800 font-semibold">{apiMetadata.scorecard}</span>
                   </div>
                 </div>
+
+                {selectedCalcType && (
+                  <div className="pt-4 border-t border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-slate-600 font-medium text-sm">Current View:</span>
+                        <span className="ml-2 text-blue-900 font-bold text-lg">{selectedCalcType}</span>
+                      </div>
+
+                      {loadedCalculations.length > 1 && (
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm text-slate-600 font-medium">Switch View:</label>
+                          <select
+                            value={loadedCalculations.findIndex(c => extractCalcType(c['calc-id']) === selectedCalcType)}
+                            onChange={(e) => {
+                              const selectedCalc = loadedCalculations[parseInt(e.target.value)];
+                              if (selectedCalc) {
+                                importAPICalculation(selectedCalc);
+                              }
+                            }}
+                            className="px-3 py-1.5 bg-white border border-blue-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {loadedCalculations.map((calc, idx) => {
+                              const calcType = extractCalcType(calc['calc-id']);
+                              return (
+                                <option key={calc['calc-id']} value={idx}>
+                                  {calcType}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
