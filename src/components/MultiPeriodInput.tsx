@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, TrendingUp, Calendar, AlertCircle, DollarSign, GitCompare, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, Calendar, AlertCircle, DollarSign, GitCompare, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { CashFlow, calculateXIRR, XIRRResult } from '../utils/xirr';
 
 interface FlowInput {
@@ -108,6 +108,58 @@ export function MultiPeriodInput({
 
   const calculateResults = () => {
     setShowResults(true);
+  };
+
+  const generateJSON = () => {
+    const startTime = Date.now();
+
+    const windows = periodResults.map((pr, index) => {
+      if (pr.error || !pr.result) {
+        return {
+          "window-id": (index + 1).toString(),
+          "converged": false,
+          "error": pr.error || "Unable to calculate XIRR",
+          "iterations": 0,
+          "xirr": -999.99
+        };
+      }
+
+      const selectedMethod = pr.result.hasDifference &&
+        Math.abs(pr.result.brent.finalNPV) < Math.abs(pr.result.newtonRaphson.finalNPV)
+        ? pr.result.brent
+        : pr.result.newtonRaphson;
+
+      return {
+        "window-id": (index + 1).toString(),
+        "converged": selectedMethod.converged,
+        "iterations": selectedMethod.iterations,
+        "xirr": parseFloat(selectedMethod.rate.toFixed(15))
+      };
+    });
+
+    const calcTime = Date.now() - startTime;
+
+    const jsonOutput = {
+      "type": "xirr-results",
+      "calc-time": `${calcTime} ms`,
+      "request-id": `${Date.now()}-user-generated`,
+      "results": [
+        {
+          "calc-id": "multi-period-analysis",
+          "windows": windows
+        }
+      ]
+    };
+
+    const blob = new Blob([JSON.stringify(jsonOutput, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `xirr-results-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const periodResults: PeriodResult[] = periodValues.periods.map(p => {
@@ -364,6 +416,13 @@ export function MultiPeriodInput({
               Multi-Period Performance Analysis
             </h2>
             <p className="text-slate-600 mt-2">Compare returns across different time horizons</p>
+            <button
+              onClick={generateJSON}
+              className="mt-4 inline-flex items-center gap-2 px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium shadow-md"
+            >
+              <Download className="w-4 h-4" />
+              Export JSON
+            </button>
           </div>
 
           <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
