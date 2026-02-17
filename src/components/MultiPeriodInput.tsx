@@ -366,7 +366,7 @@ export function MultiPeriodInput({
             <p className="text-slate-600 mt-2">Compare returns across different time horizons</p>
           </div>
 
-          <div className="grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
             {periodResults.map((periodResult, index) => {
               const colors = [
                 'bg-gradient-to-br from-blue-500 to-blue-600',
@@ -410,21 +410,21 @@ export function MultiPeriodInput({
                     </div>
                   ) : periodResult.result ? (
                     <div className="space-y-4">
-                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-5 border border-green-200">
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
                         {periodResult.result.totalDays < 365 ? (
                           <>
-                            <p className="text-sm text-slate-600 mb-1 font-medium">Simple Return (Non-Annualized)</p>
-                            <p className={`text-4xl font-bold ${
+                            <p className="text-xs text-slate-600 mb-1 font-medium">Simple Return (Non-Annualized)</p>
+                            <p className={`text-3xl font-bold ${
                               parseFloat(periodResult.result.simpleReturnPercent) >= 0 ? 'text-green-600' : 'text-red-600'
                             }`}>
                               {periodResult.result.simpleReturnPercent}%
                             </p>
-                            <p className="text-xs text-slate-500 mt-2">Period is less than 12 months</p>
+                            <p className="text-[10px] text-slate-500 mt-1">Period is less than 12 months</p>
                           </>
                         ) : (
                           <>
-                            <p className="text-sm text-slate-600 mb-1 font-medium">Annualized Return (XIRR)</p>
-                            <p className={`text-4xl font-bold ${
+                            <p className="text-xs text-slate-600 mb-1 font-medium">Annualized Return (XIRR)</p>
+                            <p className={`text-3xl font-bold ${
                               parseFloat(periodResult.result.xirrPercent) >= 0 ? 'text-green-600' : 'text-red-600'
                             }`}>
                               {periodResult.result.xirrPercent}%
@@ -452,21 +452,21 @@ export function MultiPeriodInput({
                           )}
                         </div>
 
-                        <div className="space-y-2 text-xs">
-                          <div className={`flex justify-between p-2 rounded ${
+                        <div className="space-y-2 text-[11px]">
+                          <div className={`flex justify-between items-center p-2 rounded ${
                             periodResult.result.hasDifference ? 'bg-blue-100 border border-blue-300' : 'bg-white'
                           }`}>
-                            <span className="font-medium text-slate-700">Newton-Raphson:</span>
-                            <span className="font-mono font-semibold text-slate-800">
+                            <span className="font-medium text-slate-700 truncate pr-1">Newton-Raphson:</span>
+                            <span className="font-mono font-semibold text-slate-800 flex-shrink-0">
                               {periodResult.result.newtonRaphson.ratePercent}%
                             </span>
                           </div>
 
-                          <div className={`flex justify-between p-2 rounded ${
+                          <div className={`flex justify-between items-center p-2 rounded ${
                             periodResult.result.hasDifference ? 'bg-green-100 border border-green-300' : 'bg-white'
                           }`}>
-                            <span className="font-medium text-slate-700">Brent's Method:</span>
-                            <span className="font-mono font-semibold text-slate-800">
+                            <span className="font-medium text-slate-700 truncate pr-1">Brent's Method:</span>
+                            <span className="font-mono font-semibold text-slate-800 flex-shrink-0">
                               {periodResult.result.brent.ratePercent}%
                             </span>
                           </div>
