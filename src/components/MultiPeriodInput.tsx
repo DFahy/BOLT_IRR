@@ -366,7 +366,7 @@ export function MultiPeriodInput({
             <p className="text-slate-600 mt-2">Compare returns across different time horizons</p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {periodResults.map((periodResult, index) => {
               const colors = [
                 'bg-gradient-to-br from-blue-500 to-blue-600',
