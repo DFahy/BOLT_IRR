@@ -432,7 +432,8 @@ export function MultiPeriodInput({
 
               const formatDate = (dateStr: string) => {
                 if (!dateStr) return '';
-                const date = new Date(dateStr);
+                const [year, month, day] = dateStr.split('-');
+                const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
                 return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
               };
 
