@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { Upload, Plus, Trash2, Calculator, Download, LogOut, ClipboardPaste, X, BarChart3, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { Upload, Plus, Trash2, Calculator, Download, ClipboardPaste, X, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { CashFlow, calculateXIRR, parseCSV, XIRRResult } from './utils/xirr';
-import { useAuth } from './lib/AuthContext';
-import { Auth } from './components/Auth';
 import { DatasetManager } from './components/DatasetManager';
 import { MultiPeriodInput } from './components/MultiPeriodInput';
 
@@ -29,7 +27,6 @@ interface PeriodValues {
 type ViewMode = 'simple' | 'multi-period';
 
 function App() {
-  const { user, loading: authLoading, signOut } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('simple');
   const [flows, setFlows] = useState<FlowInput[]>([
     { id: '1', date: '', amount: '', description: 'Initial Investment' },
@@ -111,18 +108,6 @@ function App() {
 
     return flows.sort((a, b) => a.date.getTime() - b.date.getTime());
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <div className="text-xl text-slate-600">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Auth />;
-  }
 
   const addFlow = () => {
     setFlows([...flows, {
@@ -895,16 +880,6 @@ Example with Loss:
                   Investment IRR Calculator
                 </h1>
                 <p className="text-blue-100 mt-2">Calculate Extended Internal Rate of Return (XIRR) for your investments</p>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <div className="text-blue-100 text-sm">{user.email}</div>
-                <button
-                  onClick={signOut}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 hover:bg-blue-400 text-white rounded-lg transition-colors text-sm font-medium"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sign Out
-                </button>
               </div>
             </div>
           </div>

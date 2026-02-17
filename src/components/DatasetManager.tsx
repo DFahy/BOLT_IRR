@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Save, FolderOpen, Trash2, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../lib/AuthContext';
 
 interface Dataset {
   id: string;
@@ -38,7 +36,6 @@ interface DatasetManagerProps {
 }
 
 export function DatasetManager({ onLoad, currentFlows, periodValues, isMultiPeriod }: DatasetManagerProps) {
-  const { user } = useAuth();
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
   const [datasets, setDatasets] = useState<Dataset[]>([]);
@@ -47,63 +44,50 @@ export function DatasetManager({ onLoad, currentFlows, periodValues, isMultiPeri
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const loadDatasets = async () => {
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from('datasets')
-      .select('*')
-      .order('updated_at', { ascending: false });
-
-    if (error) {
-      setError('Failed to load datasets');
-      return;
+  const loadDatasets = () => {
+    const stored = localStorage.getItem('irr_datasets');
+    if (stored) {
+      try {
+        const data = JSON.parse(stored);
+        setDatasets(data);
+      } catch (err) {
+        setError('Failed to load datasets');
+      }
     }
-
-    setDatasets(data || []);
   };
 
   useEffect(() => {
     if (showLoadDialog) {
       loadDatasets();
     }
-  }, [showLoadDialog, user]);
+  }, [showLoadDialog]);
 
-  const handleSave = async () => {
-    if (!user || !saveName.trim()) return;
+  const handleSave = () => {
+    if (!saveName.trim()) return;
 
     setLoading(true);
     setError('');
 
     try {
-      const { data: dataset, error: datasetError } = await supabase
-        .from('datasets')
-        .insert({
-          user_id: user.id,
-          name: saveName.trim(),
-          description: saveDescription.trim(),
-          period_values: isMultiPeriod && periodValues ? periodValues : null,
-        })
-        .select()
-        .single();
+      const stored = localStorage.getItem('irr_datasets');
+      const existingDatasets = stored ? JSON.parse(stored) : [];
 
-      if (datasetError) throw datasetError;
+      const newDataset: Dataset = {
+        id: Date.now().toString(),
+        name: saveName.trim(),
+        description: saveDescription.trim(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-      const cashFlowsToInsert = currentFlows
-        .filter(f => f.date && f.amount)
-        .map((flow, index) => ({
-          dataset_id: dataset.id,
-          date: flow.date,
-          amount: parseFloat(flow.amount),
-          description: flow.description,
-          sort_order: index,
-        }));
+      const datasetWithFlows = {
+        ...newDataset,
+        flows: currentFlows.filter(f => f.date && f.amount),
+        period_values: isMultiPeriod && periodValues ? periodValues : null,
+      };
 
-      const { error: flowsError } = await supabase
-        .from('cash_flows')
-        .insert(cashFlowsToInsert);
-
-      if (flowsError) throw flowsError;
+      const updatedDatasets = [datasetWithFlows, ...existingDatasets];
+      localStorage.setItem('irr_datasets', JSON.stringify(updatedDatasets));
 
       setSaveName('');
       setSaveDescription('');
@@ -116,34 +100,22 @@ export function DatasetManager({ onLoad, currentFlows, periodValues, isMultiPeri
     }
   };
 
-  const handleLoad = async (datasetId: string) => {
+  const handleLoad = (datasetId: string) => {
     setLoading(true);
     setError('');
 
     try {
-      const { data: dataset, error: datasetError } = await supabase
-        .from('datasets')
-        .select('period_values')
-        .eq('id', datasetId)
-        .single();
+      const stored = localStorage.getItem('irr_datasets');
+      if (!stored) throw new Error('No datasets found');
 
-      if (datasetError) throw datasetError;
+      const datasets = JSON.parse(stored);
+      const dataset = datasets.find((d: any) => d.id === datasetId);
 
-      const { data, error } = await supabase
-        .from('cash_flows')
-        .select('*')
-        .eq('dataset_id', datasetId)
-        .order('sort_order');
+      if (!dataset) throw new Error('Dataset not found');
 
-      if (error) throw error;
-
-      const flows: CashFlowData[] = data.map(cf => ({
-        date: cf.date,
-        amount: cf.amount.toString(),
-        description: cf.description,
-      }));
-
+      const flows: CashFlowData[] = dataset.flows || [];
       const loadedPeriodValues = dataset.period_values as PeriodValues | null;
+
       onLoad(flows, loadedPeriodValues || undefined);
       setShowLoadDialog(false);
     } catch (err) {
@@ -153,16 +125,16 @@ export function DatasetManager({ onLoad, currentFlows, periodValues, isMultiPeri
     }
   };
 
-  const handleDelete = async (datasetId: string) => {
+  const handleDelete = (datasetId: string) => {
     if (!confirm('Are you sure you want to delete this dataset?')) return;
 
     try {
-      const { error } = await supabase
-        .from('datasets')
-        .delete()
-        .eq('id', datasetId);
+      const stored = localStorage.getItem('irr_datasets');
+      if (!stored) return;
 
-      if (error) throw error;
+      const datasets = JSON.parse(stored);
+      const updatedDatasets = datasets.filter((d: any) => d.id !== datasetId);
+      localStorage.setItem('irr_datasets', JSON.stringify(updatedDatasets));
 
       loadDatasets();
     } catch (err) {
