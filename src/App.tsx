@@ -46,7 +46,7 @@ const extractCalcType = (calcId: string): string => {
 };
 
 function App() {
-  const [viewMode, setViewMode] = useState<ViewMode>('simple');
+  const [viewMode, setViewMode] = useState<ViewMode>('multi-period');
   const [flows, setFlows] = useState<FlowInput[]>([
     { id: '1', date: '', amount: '', description: 'Initial Investment' },
     { id: '2', date: '', amount: '', description: 'Final Value' }
