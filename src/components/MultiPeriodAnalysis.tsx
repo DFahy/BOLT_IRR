@@ -76,7 +76,7 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
         <p className="text-slate-600 mt-2">Compare returns across different time horizons</p>
       </div>
 
-      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3">
         {periodResults.map((periodResult, index) => (
           <div
             key={periodResult.period}
