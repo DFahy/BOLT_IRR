@@ -194,64 +194,25 @@ function App() {
     console.log('handleJSONImport called, text length:', jsonText.length);
     try {
       let data;
+
+      // Clean the text first - remove BOM and normalize line endings
+      let cleanText = jsonText.trim();
+      if (cleanText.charCodeAt(0) === 0xFEFF) {
+        cleanText = cleanText.slice(1);
+      }
+
       try {
         // Try standard JSON parsing first
-        data = JSON.parse(jsonText);
+        data = JSON.parse(cleanText);
+        console.log('JSON parsed successfully on first try');
       } catch (firstError) {
-        // If that fails, try to fix common JSON issues
-        console.log('Standard JSON parse failed, attempting to fix common issues...', firstError);
+        console.error('Standard JSON parse failed:', firstError);
+        console.log('First 200 chars of input:', cleanText.substring(0, 200));
+        console.log('Error details:', firstError);
 
-        // Try multiple fixing strategies
-        const fixingStrategies = [
-          // Strategy 1: Remove trailing commas
-          (text: string) => text.replace(/,(\s*[}\]])/g, '$1'),
-
-          // Strategy 2: Fix single quotes (but be careful not to break existing strings)
-          (text: string) => text.replace(/:\s*'([^']*)'/g, ': "$1"').replace(/{\s*'([^']*)'\s*:/g, '{"$1":'),
-
-          // Strategy 3: Quote unquoted keys
-          (text: string) => text.replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$-]*)\s*:/g, '$1"$2":'),
-
-          // Strategy 4: All fixes combined
-          (text: string) => {
-            return text
-              .replace(/,(\s*[}\]])/g, '$1')  // Remove trailing commas
-              .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$-]*)\s*:/g, '$1"$2":')  // Quote keys
-              .replace(/:\s*'([^']*)'/g, ': "$1"');  // Fix single-quoted values
-          }
-        ];
-
-        let parsed = false;
-        for (let i = 0; i < fixingStrategies.length && !parsed; i++) {
-          try {
-            const fixedJson = fixingStrategies[i](jsonText);
-            data = JSON.parse(fixedJson);
-            console.log(`JSON parsed successfully using strategy ${i + 1}`);
-            parsed = true;
-          } catch (strategyError) {
-            console.log(`Strategy ${i + 1} failed:`, strategyError);
-          }
-        }
-
-        if (!parsed) {
-          // If all strategies fail, provide helpful error message
-          const errorMsg = firstError instanceof Error ? firstError.message : String(firstError);
-          console.error('All JSON parsing strategies failed. Original error:', errorMsg);
-
-          // Try to give a more specific error message based on the error
-          let helpfulMsg = 'Invalid JSON format. ';
-          if (errorMsg.includes('property name')) {
-            helpfulMsg += 'Property names must be in "double quotes". Example: {"key": "value"}';
-          } else if (errorMsg.includes('Unexpected token')) {
-            helpfulMsg += 'Check for: missing commas, extra commas, unquoted strings, or invalid characters.';
-          } else {
-            helpfulMsg += errorMsg;
-          }
-
-          throw new Error(helpfulMsg);
-        }
+        throw new Error(`JSON parsing failed: ${firstError instanceof Error ? firstError.message : String(firstError)}`);
       }
-      console.log('JSON parsed successfully', data);
+      console.log('JSON parsed successfully, data keys:', Object.keys(data));
 
       // Check if this is an API request format
       if (data.calculations && Array.isArray(data.calculations)) {
@@ -975,6 +936,21 @@ Example with Loss:
                 periodValues={viewMode === 'multi-period' ? periodValues : undefined}
                 isMultiPeriod={viewMode === 'multi-period'}
               />
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/src/data/REQUEST.1016415.TotalPort.PlusTwoAssets.json');
+                    const text = await response.text();
+                    handleJSONImport(text);
+                  } catch (err) {
+                    setError(`Failed to load sample file: ${err instanceof Error ? err.message : String(err)}`);
+                  }
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors font-medium"
+              >
+                <Download className="w-4 h-4" />
+                Load Sample API
+              </button>
               <button
                 onClick={() => setShowPasteDialog(true)}
                 className="flex items-center justify-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors font-medium"
