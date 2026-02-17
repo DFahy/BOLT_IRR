@@ -995,19 +995,18 @@ Example with Loss:
                 isMultiPeriod={viewMode === 'multi-period'}
               />
               <button
-                onClick={async () => {
-                  try {
-                    const response = await fetch('/src/data/REQUEST.1016415.TotalPort.PlusTwoAssets.json');
-                    const text = await response.text();
-                    handleJSONImport(text);
-                  } catch (err) {
-                    setError(`Failed to load sample file: ${err instanceof Error ? err.message : String(err)}`);
-                  }
-                }}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors font-medium"
+                onClick={() => downloadTemplate('csv')}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
               >
                 <Download className="w-4 h-4" />
-                Download Sample API
+                Download CSV Template
+              </button>
+              <button
+                onClick={() => downloadTemplate('json')}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
+              >
+                <Download className="w-4 h-4" />
+                Download JSON Template
               </button>
               <button
                 onClick={() => setShowPasteDialog(true)}
@@ -1015,20 +1014,6 @@ Example with Loss:
               >
                 <ClipboardPaste className="w-4 h-4" />
                 Paste Data
-              </button>
-              <button
-                onClick={() => downloadTemplate('csv')}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
-              >
-                <Download className="w-4 h-4" />
-                CSV Template
-              </button>
-              <button
-                onClick={() => downloadTemplate('json')}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
-              >
-                <Download className="w-4 h-4" />
-                JSON Template
               </button>
               <label
                 htmlFor="file-upload"
