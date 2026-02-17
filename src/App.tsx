@@ -26,6 +26,12 @@ interface PeriodValues {
 
 type ViewMode = 'simple' | 'multi-period';
 
+interface APIMetadata {
+  requestId: string;
+  entity: string;
+  scorecard: string;
+}
+
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('simple');
   const [flows, setFlows] = useState<FlowInput[]>([
@@ -33,6 +39,7 @@ function App() {
     { id: '2', date: '', amount: '', description: 'Final Value' }
   ]);
   const [periodFlows, setPeriodFlows] = useState<FlowInput[]>([]);
+  const [apiMetadata, setApiMetadata] = useState<APIMetadata | null>(null);
   const [periodValues, setPeriodValues] = useState<PeriodValues>(() => {
     const today = new Date().toISOString().split('T')[0];
 
@@ -70,6 +77,9 @@ function App() {
       description: f.description
     }));
 
+  const findStartValueForDate = (dateStr: string): string => {
+    return '';
+  };
 
   const buildPeriodCashFlows = (startDateStr: string, endDateStr: string, startValue: string, endValue: string): CashFlow[] => {
     if (!startDateStr || !endDateStr || !endValue) return [];
@@ -251,18 +261,40 @@ function App() {
           return;
         }
 
-        // If multiple calculations, show selector
-        if (data.calculations.length > 1) {
+        // Parse request-id to extract Entity and Scorecard
+        if (data['request-id']) {
+          const parts = data['request-id'].split('|').map((p: string) => p.trim());
+          if (parts.length >= 3) {
+            setApiMetadata({
+              requestId: parts[0],
+              entity: parts[1],
+              scorecard: parts[2]
+            });
+          }
+        }
+
+        // Filter for GrossOfFees calculations only
+        const grossOfFeesCalcs = data.calculations.filter((calc: any) =>
+          calc['calc-id'] && calc['calc-id'].includes('GrossOfFees')
+        );
+
+        if (grossOfFeesCalcs.length === 0) {
+          setError('No GrossOfFees calculations found in API data.');
+          return;
+        }
+
+        // If multiple GrossOfFees calculations, show selector
+        if (grossOfFeesCalcs.length > 1) {
           setApiData(data);
-          setAvailableCalcs(data.calculations);
+          setAvailableCalcs(grossOfFeesCalcs);
           setShowCalcSelector(true);
           setError('');
           return;
         }
 
         // Single calculation - import directly
-        importAPICalculation(data.calculations[0]);
-        alert(`API data imported successfully!\n${data.calculations[0]['calc-id']}\n${data.calculations[0].dates?.length || 0} cash flows, ${data.calculations[0].windows?.length || 0} windows`);
+        importAPICalculation(grossOfFeesCalcs[0]);
+        alert(`API data imported successfully!\n${grossOfFeesCalcs[0]['calc-id']}\n${grossOfFeesCalcs[0].dates?.length || 0} cash flows, ${grossOfFeesCalcs[0].windows?.length || 0} windows`);
         return;
       }
 
@@ -885,6 +917,26 @@ Example with Loss:
           </div>
 
           <div className="p-8">
+            {apiMetadata && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 className="text-sm font-semibold text-blue-900 mb-2">API Data Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-slate-600 font-medium">Request ID:</span>
+                    <span className="ml-2 text-slate-800 font-mono text-xs">{apiMetadata.requestId}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-600 font-medium">Entity:</span>
+                    <span className="ml-2 text-slate-800 font-semibold">{apiMetadata.entity}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-600 font-medium">Scorecard:</span>
+                    <span className="ml-2 text-slate-800 font-semibold">{apiMetadata.scorecard}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-center mb-6">
               <div className="inline-flex rounded-lg bg-slate-100 p-1">
                 <button
