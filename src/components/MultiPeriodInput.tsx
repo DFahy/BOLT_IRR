@@ -416,13 +416,6 @@ export function MultiPeriodInput({
               Multi-Period Performance Analysis
             </h2>
             <p className="text-slate-600 mt-2">Compare returns across different time horizons</p>
-            <button
-              onClick={generateJSON}
-              className="mt-4 inline-flex items-center gap-2 px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium shadow-md"
-            >
-              <Download className="w-4 h-4" />
-              Export JSON
-            </button>
           </div>
 
           <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
