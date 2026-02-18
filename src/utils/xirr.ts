@@ -43,7 +43,7 @@ function calculateNPV(rate: number, cashFlows: CashFlow[], startDate: Date): num
   let npv = 0;
   for (const flow of cashFlows) {
     const days = dateDiffInDays(startDate, flow.date);
-    const years = days / 365.25;
+    const years = days / 365;
     npv += flow.amount / Math.pow(1 + rate, years);
   }
   return npv;
@@ -53,7 +53,7 @@ function calculateDerivativeNPV(rate: number, cashFlows: CashFlow[], startDate: 
   let dnpv = 0;
   for (const flow of cashFlows) {
     const days = dateDiffInDays(startDate, flow.date);
-    const years = days / 365.25;
+    const years = days / 365;
     dnpv += (-years * flow.amount) / Math.pow(1 + rate, years + 1);
   }
   return dnpv;
@@ -249,7 +249,7 @@ export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
   const hasDifference = difference > 0.00001;
 
   const annualized = totalDays > 365;
-  const years = totalDays / 365.25;
+  const years = totalDays / 365;
   const simpleReturn = Math.pow(1 + rate, years) - 1;
 
   return {
