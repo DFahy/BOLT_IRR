@@ -83,6 +83,38 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
         <p className="text-slate-600 mt-2">Compare returns across different time horizons</p>
       </div>
 
+      <div className="mb-6 p-4 bg-gradient-to-br from-slate-700 to-slate-800 text-white rounded-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-300">Summary Statistics</p>
+            <div className="mt-2 flex items-baseline gap-6">
+              <div>
+                <span className="text-3xl font-bold">{methodStats.totalCalculations}</span>
+                <span className="text-sm text-slate-300 ml-2">Total Calculations</span>
+              </div>
+              <div>
+                <span className={`text-3xl font-bold ${methodStats.methodMismatches > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+                  {methodStats.methodMismatches}
+                </span>
+                <span className="text-sm text-slate-300 ml-2">Method Mismatches</span>
+              </div>
+            </div>
+          </div>
+          {methodStats.methodMismatches > 0 ? (
+            <AlertTriangle className="w-12 h-12 text-amber-400 opacity-50" />
+          ) : methodStats.totalCalculations > 0 ? (
+            <CheckCircle2 className="w-12 h-12 text-green-400 opacity-50" />
+          ) : null}
+        </div>
+        {methodStats.totalCalculations > 0 && (
+          <p className="text-xs text-slate-400 mt-3">
+            {methodStats.methodMismatches === 0
+              ? 'All calculation methods agree on the results.'
+              : `${methodStats.methodMismatches} out of ${methodStats.totalCalculations} calculations show differences between Newton-Raphson and Brent's method.`}
+          </p>
+        )}
+      </div>
+
       <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3">
         {periodResults.map((periodResult, index) => (
           <div
@@ -261,38 +293,6 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
             solutions. Both methods are mathematically correct, but Brent's method is more reliable
             in edge cases.
           </p>
-        </div>
-
-        <div className="mt-4 p-4 bg-gradient-to-br from-slate-700 to-slate-800 text-white rounded-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-300">Summary Statistics</p>
-              <div className="mt-2 flex items-baseline gap-6">
-                <div>
-                  <span className="text-3xl font-bold">{methodStats.totalCalculations}</span>
-                  <span className="text-sm text-slate-300 ml-2">Total Calculations</span>
-                </div>
-                <div>
-                  <span className={`text-3xl font-bold ${methodStats.methodMismatches > 0 ? 'text-amber-400' : 'text-green-400'}`}>
-                    {methodStats.methodMismatches}
-                  </span>
-                  <span className="text-sm text-slate-300 ml-2">Method Mismatches</span>
-                </div>
-              </div>
-            </div>
-            {methodStats.methodMismatches > 0 ? (
-              <AlertTriangle className="w-12 h-12 text-amber-400 opacity-50" />
-            ) : methodStats.totalCalculations > 0 ? (
-              <CheckCircle2 className="w-12 h-12 text-green-400 opacity-50" />
-            ) : null}
-          </div>
-          {methodStats.totalCalculations > 0 && (
-            <p className="text-xs text-slate-400 mt-3">
-              {methodStats.methodMismatches === 0
-                ? 'All calculation methods agree on the results.'
-                : `${methodStats.methodMismatches} out of ${methodStats.totalCalculations} calculations show differences between Newton-Raphson and Brent's method.`}
-            </p>
-          )}
         </div>
       </div>
     </div>
