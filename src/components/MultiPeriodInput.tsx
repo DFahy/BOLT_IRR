@@ -421,7 +421,9 @@ export function MultiPeriodInput({
           {(() => {
             const validResults = periodResults.filter(pr => pr.result && !pr.error);
             const totalCalculations = validResults.length;
-            const methodMismatches = validResults.filter(pr => pr.result?.hasDifference).length;
+            const mismatchedPeriods = validResults.filter(pr => pr.result?.hasDifference);
+            const methodMismatches = mismatchedPeriods.length;
+            const mismatchPeriodNames = mismatchedPeriods.map(pr => pr.period);
 
             return (
               <div className="mb-6 p-4 bg-gradient-to-br from-slate-700 to-slate-800 text-white rounded-lg">
@@ -451,7 +453,7 @@ export function MultiPeriodInput({
                   <p className="text-xs text-slate-400 mt-3">
                     {methodMismatches === 0
                       ? 'All calculation methods agree on the results.'
-                      : `${methodMismatches} out of ${totalCalculations} calculations show differences between Newton-Raphson and Brent's method.`}
+                      : `${methodMismatches} out of ${totalCalculations} calculations show differences between Newton-Raphson and Brent's method (${mismatchPeriodNames.join(', ')}).`}
                   </p>
                 )}
               </div>
