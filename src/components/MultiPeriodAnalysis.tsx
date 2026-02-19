@@ -57,6 +57,13 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
     });
   }, [cashFlows]);
 
+  const methodStats = useMemo(() => {
+    const validResults = periodResults.filter(pr => pr.result !== null);
+    const totalCalculations = validResults.length;
+    const methodMismatches = validResults.filter(pr => pr.result?.hasDifference).length;
+    return { totalCalculations, methodMismatches };
+  }, [periodResults]);
+
   if (cashFlows.length < 2) {
     return (
       <div className="p-8 text-center text-slate-500">
@@ -254,6 +261,38 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
             solutions. Both methods are mathematically correct, but Brent's method is more reliable
             in edge cases.
           </p>
+        </div>
+
+        <div className="mt-4 p-4 bg-gradient-to-br from-slate-700 to-slate-800 text-white rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-300">Summary Statistics</p>
+              <div className="mt-2 flex items-baseline gap-6">
+                <div>
+                  <span className="text-3xl font-bold">{methodStats.totalCalculations}</span>
+                  <span className="text-sm text-slate-300 ml-2">Total Calculations</span>
+                </div>
+                <div>
+                  <span className={`text-3xl font-bold ${methodStats.methodMismatches > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+                    {methodStats.methodMismatches}
+                  </span>
+                  <span className="text-sm text-slate-300 ml-2">Method Mismatches</span>
+                </div>
+              </div>
+            </div>
+            {methodStats.methodMismatches > 0 ? (
+              <AlertTriangle className="w-12 h-12 text-amber-400 opacity-50" />
+            ) : methodStats.totalCalculations > 0 ? (
+              <CheckCircle2 className="w-12 h-12 text-green-400 opacity-50" />
+            ) : null}
+          </div>
+          {methodStats.totalCalculations > 0 && (
+            <p className="text-xs text-slate-400 mt-3">
+              {methodStats.methodMismatches === 0
+                ? 'All calculation methods agree on the results.'
+                : `${methodStats.methodMismatches} out of ${methodStats.totalCalculations} calculations show differences between Newton-Raphson and Brent's method.`}
+            </p>
+          )}
         </div>
       </div>
     </div>
