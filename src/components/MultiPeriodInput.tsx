@@ -418,6 +418,46 @@ export function MultiPeriodInput({
             <p className="text-slate-600 mt-2">Compare returns across different time horizons</p>
           </div>
 
+          {(() => {
+            const validResults = periodResults.filter(pr => pr.result && !pr.error);
+            const totalCalculations = validResults.length;
+            const methodMismatches = validResults.filter(pr => pr.result?.hasDifference).length;
+
+            return (
+              <div className="mb-6 p-4 bg-gradient-to-br from-slate-700 to-slate-800 text-white rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-300">Summary Statistics</p>
+                    <div className="mt-2 flex items-baseline gap-6">
+                      <div>
+                        <span className="text-3xl font-bold">{totalCalculations}</span>
+                        <span className="text-sm text-slate-300 ml-2">Total Calculations</span>
+                      </div>
+                      <div>
+                        <span className={`text-3xl font-bold ${methodMismatches > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+                          {methodMismatches}
+                        </span>
+                        <span className="text-sm text-slate-300 ml-2">Method Mismatches</span>
+                      </div>
+                    </div>
+                  </div>
+                  {methodMismatches > 0 ? (
+                    <AlertTriangle className="w-12 h-12 text-amber-400 opacity-50" />
+                  ) : totalCalculations > 0 ? (
+                    <CheckCircle2 className="w-12 h-12 text-green-400 opacity-50" />
+                  ) : null}
+                </div>
+                {totalCalculations > 0 && (
+                  <p className="text-xs text-slate-400 mt-3">
+                    {methodMismatches === 0
+                      ? 'All calculation methods agree on the results.'
+                      : `${methodMismatches} out of ${totalCalculations} calculations show differences between Newton-Raphson and Brent's method.`}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
           <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
             {periodResults.map((periodResult, index) => {
               const colors = [
