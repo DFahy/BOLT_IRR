@@ -60,8 +60,10 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
   const methodStats = useMemo(() => {
     const validResults = periodResults.filter(pr => pr.result !== null);
     const totalCalculations = validResults.length;
-    const methodMismatches = validResults.filter(pr => pr.result?.hasDifference).length;
-    return { totalCalculations, methodMismatches };
+    const mismatchedPeriods = validResults.filter(pr => pr.result?.hasDifference);
+    const methodMismatches = mismatchedPeriods.length;
+    const mismatchPeriodNames = mismatchedPeriods.map(pr => pr.period);
+    return { totalCalculations, methodMismatches, mismatchPeriodNames };
   }, [periodResults]);
 
   if (cashFlows.length < 2) {
@@ -110,7 +112,7 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
           <p className="text-xs text-slate-400 mt-3">
             {methodStats.methodMismatches === 0
               ? 'All calculation methods agree on the results.'
-              : `${methodStats.methodMismatches} out of ${methodStats.totalCalculations} calculations show differences between Newton-Raphson and Brent's method.`}
+              : `${methodStats.methodMismatches} out of ${methodStats.totalCalculations} calculations show differences between Newton-Raphson and Brent's method${methodStats.mismatchPeriodNames.length > 0 ? ` (${methodStats.mismatchPeriodNames.join(', ')})` : ''}.`}
           </p>
         )}
       </div>
