@@ -503,8 +503,18 @@ export function MultiPeriodInput({
                     </div>
                   ) : periodResult.result ? (
                     <div className="space-y-4">
-                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
-                        {periodResult.result.totalDays < 365 ? (
+                      <div className={`rounded-lg p-4 border ${
+                        periodResult.result.hasDifference
+                          ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300'
+                          : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200'
+                      }`}>
+                        {periodResult.result.hasDifference ? (
+                          <>
+                            <p className="text-xs text-slate-600 mb-1 font-medium">Calculation Result</p>
+                            <p className="text-3xl font-bold text-amber-600">N/A</p>
+                            <p className="text-[10px] text-amber-700 mt-1">Methods disagree - result unreliable</p>
+                          </>
+                        ) : periodResult.result.totalDays < 365 ? (
                           <>
                             <p className="text-xs text-slate-600 mb-1 font-medium">Simple Return (Non-Annualized)</p>
                             <p className={`text-3xl font-bold ${
