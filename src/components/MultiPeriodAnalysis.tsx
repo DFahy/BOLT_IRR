@@ -112,7 +112,7 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
           <p className="text-xs text-slate-400 mt-3">
             {methodStats.methodMismatches === 0
               ? 'All calculation methods agree on the results.'
-              : `${methodStats.methodMismatches} out of ${methodStats.totalCalculations} calculations show differences between Newton-Raphson and Brent's method${methodStats.mismatchPeriodNames.length > 0 ? ` (${methodStats.mismatchPeriodNames.join(', ')})` : ''}.`}
+              : `${methodStats.methodMismatches} out of ${methodStats.totalCalculations} calculations show differences between Newton-Raphson and Brent's method (${methodStats.mismatchPeriodNames.join(', ')}).`}
           </p>
         )}
       </div>
