@@ -496,14 +496,44 @@ export function MultiPeriodInput({
 
                 <div className="p-6">
                   {periodResult.error || (periodResult.result && periodResult.result.errorReason) ? (
-                    <div className="flex items-start gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                      <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-amber-800">Not Available</p>
-                        <p className="text-xs text-amber-700 mt-1">
-                          {periodResult.error || periodResult.result?.errorReason}
-                        </p>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-amber-800">Not Available</p>
+                          <p className="text-xs text-amber-700 mt-1">
+                            {periodResult.error || periodResult.result?.errorReason}
+                          </p>
+                        </div>
                       </div>
+                      {periodResult.cashFlows.length > 0 && (
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="bg-white p-3 rounded-lg border border-slate-200">
+                            <p className="text-xs text-slate-600 mb-1">Start Value</p>
+                            <p className={`text-lg font-bold ${
+                              periodResult.cashFlows[0].amount >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              ${Math.abs(periodResult.cashFlows[0].amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                          <div className="bg-white p-3 rounded-lg border border-slate-200">
+                            <p className="text-xs text-slate-600 mb-1">End Value</p>
+                            <p className={`text-lg font-bold ${
+                              periodResult.cashFlows[periodResult.cashFlows.length - 1].amount >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              ${Math.abs(periodResult.cashFlows[periodResult.cashFlows.length - 1].amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                          <div className="bg-white p-3 rounded-lg border border-slate-200">
+                            <p className="text-xs text-slate-600 mb-1">Total Flows</p>
+                            <p className={`text-lg font-bold ${
+                              periodResult.cashFlows.reduce((sum, cf) => sum + cf.amount, 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              ${periodResult.cashFlows.reduce((sum, cf) => sum + cf.amount, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : periodResult.result ? (
                     <div className="space-y-4">
