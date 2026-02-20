@@ -241,9 +241,8 @@ export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
   console.log(`  First flow: ${firstCashFlow}, Last flow: ${lastCashFlow}`);
   console.log(`  Net: ${netCashFlow}, Total in: ${totalInflows}, Total out: ${totalOutflows}`);
 
-  // XIRR requires at least one positive and one negative cash flow
-  if (totalOutflows === 0 || totalInflows === 0) {
-    console.log('XIRR: Invalid - need both positive and negative cash flows');
+  if (lastCashFlow < 0 && netCashFlow < 0) {
+    console.log('XIRR: Invalid - negative ending value with negative net cash flow');
     return null;
   }
 
