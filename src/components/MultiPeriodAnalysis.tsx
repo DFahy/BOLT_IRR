@@ -40,12 +40,12 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
 
       const xirrResult = calculateXIRR(filteredFlows);
 
-      if (!xirrResult) {
+      if (!xirrResult || xirrResult.errorReason) {
         return {
           period,
           years,
           result: null,
-          error: 'Unable to calculate (invalid cash flow pattern)'
+          error: xirrResult?.errorReason || 'Unable to calculate'
         };
       }
 
@@ -139,6 +139,7 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
                   <AlertCircle className="w-3 h-3 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-[10px] font-medium text-amber-800">Not Available</p>
+                    <p className="text-[9px] text-amber-700 mt-1">{periodResult.error}</p>
                   </div>
                 </div>
               ) : periodResult.result ? (

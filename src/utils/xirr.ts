@@ -30,6 +30,7 @@ export interface XIRRResult {
   hasDifference: boolean;
   difference: number;
   differencePercent: string;
+  errorReason?: string;
 }
 
 function dateDiffInDays(date1: Date, date2: Date): number {
@@ -219,7 +220,7 @@ function calculateWithBrent(
 export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
   if (cashFlows.length < 2) {
     console.log('XIRR: Insufficient flows (< 2)');
-    return null;
+    return { errorReason: 'Insufficient data: at least 2 cash flows required' } as any;
   }
 
   const sortedFlows = [...cashFlows].sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -243,7 +244,7 @@ export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
 
   if (lastCashFlow < 0 && netCashFlow < 0) {
     console.log('XIRR: Invalid - negative ending value with negative net cash flow');
-    return null;
+    return { errorReason: 'No ending value: portfolio ends with a withdrawal and negative net cash flow' } as any;
   }
 
   const newtonResult = calculateWithNewtonRaphson(sortedFlows, startDate);
