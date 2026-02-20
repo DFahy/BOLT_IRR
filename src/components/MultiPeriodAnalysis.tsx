@@ -213,12 +213,35 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
 
                   <div className="space-y-1 text-[10px]">
                     <div className="flex justify-between items-center">
+                      <span className="text-slate-600">Start</span>
+                      <span className={`font-semibold ${
+                        (periodResult.startValue || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        ${((periodResult.startValue || 0) / 1000).toFixed(0)}k
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-600">End</span>
+                      <span className={`font-semibold ${
+                        (periodResult.endValue || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        ${((periodResult.endValue || 0) / 1000).toFixed(0)}k
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-600">Total</span>
+                      <span className={`font-semibold ${
+                        (periodResult.totalFlows || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        ${((periodResult.totalFlows || 0) / 1000).toFixed(0)}k
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
                       <span className="text-slate-600">Days</span>
                       <span className="font-semibold text-slate-800">
                         {periodResult.result.totalDays}
                       </span>
                     </div>
-
                     <div className="flex justify-between items-center">
                       <span className="text-slate-600">Net</span>
                       <span className={`font-semibold ${
