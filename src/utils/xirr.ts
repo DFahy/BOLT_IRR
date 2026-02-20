@@ -243,8 +243,8 @@ export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
   console.log(`  Net: ${netCashFlow}, Total in: ${totalInflows}, Total out: ${totalOutflows}`);
 
   if (lastCashFlow < 0 && netCashFlow < 0) {
-    console.log('XIRR: Invalid - negative ending value with negative net cash flow');
-    return { errorReason: 'No ending value: portfolio ends with a withdrawal and negative net cash flow' } as any;
+    console.log('XIRR: Invalid - cannot calculate return when total withdrawals exceed total deposits');
+    return { errorReason: 'Cannot calculate return: total withdrawals exceed total deposits' } as any;
   }
 
   const newtonResult = calculateWithNewtonRaphson(sortedFlows, startDate);
