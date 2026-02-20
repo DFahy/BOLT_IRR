@@ -7,6 +7,9 @@ interface PeriodResult {
   years: number;
   result: XIRRResult | null;
   error?: string;
+  startValue?: number;
+  endValue?: number;
+  totalFlows?: number;
 }
 
 interface MultiPeriodAnalysisProps {
@@ -29,12 +32,20 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
     return periods.map(({ period, years }) => {
       const filteredFlows = filterCashFlowsByPeriod(cashFlows, endDate, years);
 
+      // Calculate stats even if IRR can't be calculated
+      const startValue = filteredFlows.length > 0 ? filteredFlows[0].amount : 0;
+      const endValue = filteredFlows.length > 0 ? filteredFlows[filteredFlows.length - 1].amount : 0;
+      const totalFlows = filteredFlows.reduce((sum, flow) => sum + flow.amount, 0);
+
       if (filteredFlows.length < 2) {
         return {
           period,
           years,
           result: null,
-          error: 'Insufficient data for this period'
+          error: 'Insufficient data for this period',
+          startValue,
+          endValue,
+          totalFlows
         };
       }
 
@@ -45,7 +56,10 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
           period,
           years,
           result: null,
-          error: xirrResult?.errorReason || 'Unable to calculate'
+          error: xirrResult?.errorReason || 'Unable to calculate',
+          startValue,
+          endValue,
+          totalFlows
         };
       }
 
@@ -53,6 +67,9 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
         period,
         years,
         result: xirrResult,
+        startValue,
+        endValue,
+        totalFlows
       };
     });
   }, [cashFlows]);
@@ -135,11 +152,39 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
 
             <div className="p-2">
               {periodResult.error ? (
-                <div className="flex items-start gap-1 p-2 bg-amber-50 border border-amber-200 rounded">
-                  <AlertCircle className="w-3 h-3 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[10px] font-medium text-amber-800">Not Available</p>
-                    <p className="text-[9px] text-amber-700 mt-1">{periodResult.error}</p>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-1 p-2 bg-amber-50 border border-amber-200 rounded">
+                    <AlertCircle className="w-3 h-3 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] font-medium text-amber-800">Not Available</p>
+                      <p className="text-[9px] text-amber-700 mt-1">{periodResult.error}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-1 text-[10px]">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-600">Start</span>
+                      <span className={`font-semibold ${
+                        (periodResult.startValue || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        ${((periodResult.startValue || 0) / 1000).toFixed(0)}k
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-600">End</span>
+                      <span className={`font-semibold ${
+                        (periodResult.endValue || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        ${((periodResult.endValue || 0) / 1000).toFixed(0)}k
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-600">Total</span>
+                      <span className={`font-semibold ${
+                        (periodResult.totalFlows || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        ${((periodResult.totalFlows || 0) / 1000).toFixed(0)}k
+                      </span>
+                    </div>
                   </div>
                 </div>
               ) : periodResult.result ? (
