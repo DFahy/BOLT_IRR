@@ -667,9 +667,23 @@ export function MultiPeriodInput({
                         </div>
 
                         <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                          <span className="text-slate-600">Total Invested</span>
-                          <span className="font-semibold text-red-600">
-                            ${periodResult.result.totalOutflows.toLocaleString(undefined, {
+                          <span className="text-slate-600">Start</span>
+                          <span className={`font-semibold ${
+                            periodResult.cashFlows[0].amount >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {periodResult.cashFlows[0].amount >= 0 ? '$' : '-$'}{Math.abs(periodResult.cashFlows[0].amount).toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2
+                            })}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                          <span className="text-slate-600">End</span>
+                          <span className={`font-semibold ${
+                            periodResult.cashFlows[periodResult.cashFlows.length - 1].amount >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {periodResult.cashFlows[periodResult.cashFlows.length - 1].amount >= 0 ? '$' : '-$'}{Math.abs(periodResult.cashFlows[periodResult.cashFlows.length - 1].amount).toLocaleString(undefined, {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2
                             })}
@@ -677,9 +691,11 @@ export function MultiPeriodInput({
                         </div>
 
                         <div className="flex justify-between items-center">
-                          <span className="text-slate-600">Total Returns</span>
-                          <span className="font-semibold text-green-600">
-                            ${periodResult.result.totalInflows.toLocaleString(undefined, {
+                          <span className="text-slate-600">Total</span>
+                          <span className={`font-semibold ${
+                            periodResult.result.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {periodResult.result.netCashFlow >= 0 ? '$' : '-$'}{Math.abs(periodResult.result.netCashFlow).toLocaleString(undefined, {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2
                             })}
