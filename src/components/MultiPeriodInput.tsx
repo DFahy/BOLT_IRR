@@ -507,7 +507,7 @@ export function MultiPeriodInput({
                         </div>
                       </div>
                       {periodResult.cashFlows.length > 0 && (
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-2">
                           <div className="bg-white p-3 rounded-lg border border-slate-200">
                             <p className="text-xs text-slate-600 mb-1">Start Value</p>
                             <p className={`text-lg font-bold ${
