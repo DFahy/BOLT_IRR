@@ -503,7 +503,7 @@ export function MultiPeriodInput({
                         <p className="text-xs text-amber-700 mt-1">{periodResult.error}</p>
                       </div>
                     </div>
-                  ) : periodResult.result ? (
+                  ) : periodResult.result && !periodResult.result.errorReason ? (
                     <div className="space-y-4">
                       <div className={`rounded-lg p-4 border ${
                         periodResult.result.hasDifference
