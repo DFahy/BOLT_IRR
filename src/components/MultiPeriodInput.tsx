@@ -513,7 +513,7 @@ export function MultiPeriodInput({
                             <p className={`text-lg font-bold ${
                               periodResult.cashFlows[0].amount >= 0 ? 'text-green-600' : 'text-red-600'
                             }`}>
-                              ${Math.abs(periodResult.cashFlows[0].amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {periodResult.cashFlows[0].amount >= 0 ? '$' : '-$'}{Math.abs(periodResult.cashFlows[0].amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
                           </div>
                           <div className="bg-white p-3 rounded-lg border border-slate-200">
@@ -521,7 +521,7 @@ export function MultiPeriodInput({
                             <p className={`text-lg font-bold ${
                               periodResult.cashFlows[periodResult.cashFlows.length - 1].amount >= 0 ? 'text-green-600' : 'text-red-600'
                             }`}>
-                              ${Math.abs(periodResult.cashFlows[periodResult.cashFlows.length - 1].amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {periodResult.cashFlows[periodResult.cashFlows.length - 1].amount >= 0 ? '$' : '-$'}{Math.abs(periodResult.cashFlows[periodResult.cashFlows.length - 1].amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
                           </div>
                           <div className="bg-white p-3 rounded-lg border border-slate-200">
@@ -529,7 +529,7 @@ export function MultiPeriodInput({
                             <p className={`text-lg font-bold ${
                               periodResult.cashFlows.reduce((sum, cf) => sum + cf.amount, 0) >= 0 ? 'text-green-600' : 'text-red-600'
                             }`}>
-                              ${periodResult.cashFlows.reduce((sum, cf) => sum + cf.amount, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {periodResult.cashFlows.reduce((sum, cf) => sum + cf.amount, 0) >= 0 ? '$' : '-$'}{Math.abs(periodResult.cashFlows.reduce((sum, cf) => sum + cf.amount, 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
                           </div>
                         </div>
