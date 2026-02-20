@@ -525,11 +525,17 @@ export function MultiPeriodInput({
                             </p>
                           </div>
                           <div className="bg-white p-3 rounded-lg border border-slate-200">
-                            <p className="text-xs text-slate-600 mb-1">Total Flows</p>
+                            <p className="text-xs text-slate-600 mb-1">Intermediate Flows</p>
                             <p className={`text-lg font-bold ${
-                              periodResult.cashFlows.reduce((sum, cf) => sum + cf.amount, 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                              (() => {
+                                const intermediateSum = periodResult.cashFlows.slice(1, -1).reduce((sum, cf) => sum + cf.amount, 0);
+                                return intermediateSum >= 0 ? 'text-green-600' : 'text-red-600';
+                              })()
                             }`}>
-                              {periodResult.cashFlows.reduce((sum, cf) => sum + cf.amount, 0) >= 0 ? '$' : '-$'}{Math.abs(periodResult.cashFlows.reduce((sum, cf) => sum + cf.amount, 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {(() => {
+                                const intermediateSum = periodResult.cashFlows.slice(1, -1).reduce((sum, cf) => sum + cf.amount, 0);
+                                return intermediateSum >= 0 ? '$' : '-$';
+                              })()}{Math.abs(periodResult.cashFlows.slice(1, -1).reduce((sum, cf) => sum + cf.amount, 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
                           </div>
                         </div>
