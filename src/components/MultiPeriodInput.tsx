@@ -495,15 +495,17 @@ export function MultiPeriodInput({
                 </div>
 
                 <div className="p-6">
-                  {periodResult.error ? (
+                  {periodResult.error || (periodResult.result && periodResult.result.errorReason) ? (
                     <div className="flex items-start gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                       <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-amber-800">Not Available</p>
-                        <p className="text-xs text-amber-700 mt-1">{periodResult.error}</p>
+                        <p className="text-xs text-amber-700 mt-1">
+                          {periodResult.error || periodResult.result?.errorReason}
+                        </p>
                       </div>
                     </div>
-                  ) : periodResult.result && !periodResult.result.errorReason ? (
+                  ) : periodResult.result ? (
                     <div className="space-y-4">
                       <div className={`rounded-lg p-4 border ${
                         periodResult.result.hasDifference
