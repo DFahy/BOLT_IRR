@@ -242,11 +242,6 @@ export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
   console.log(`  First flow: ${firstCashFlow}, Last flow: ${lastCashFlow}`);
   console.log(`  Net: ${netCashFlow}, Total in: ${totalInflows}, Total out: ${totalOutflows}`);
 
-  if (lastCashFlow < 0 && netCashFlow < 0) {
-    console.log('XIRR: Invalid - cannot calculate return when total withdrawals exceed total deposits');
-    return { errorReason: 'Cannot calculate return: total withdrawals exceed total deposits' } as any;
-  }
-
   const newtonResult = calculateWithNewtonRaphson(sortedFlows, startDate);
   const brentResult = calculateWithBrent(sortedFlows, startDate);
 
