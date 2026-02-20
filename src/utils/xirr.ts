@@ -218,6 +218,7 @@ function calculateWithBrent(
 
 export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
   if (cashFlows.length < 2) {
+    console.log('XIRR: Insufficient flows (< 2)');
     return null;
   }
 
@@ -235,7 +236,13 @@ export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
   const firstCashFlow = sortedFlows[0].amount;
   const lastCashFlow = sortedFlows[sortedFlows.length - 1].amount;
 
+  console.log('XIRR calculation:');
+  console.log(`  Flows: ${sortedFlows.length}, Days: ${totalDays}`);
+  console.log(`  First flow: ${firstCashFlow}, Last flow: ${lastCashFlow}`);
+  console.log(`  Net: ${netCashFlow}, Total in: ${totalInflows}, Total out: ${totalOutflows}`);
+
   if (lastCashFlow < 0 && netCashFlow < 0) {
+    console.log('XIRR: Invalid - negative ending value with negative net cash flow');
     return null;
   }
 
