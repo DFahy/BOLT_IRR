@@ -241,6 +241,10 @@ export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
   console.log(`  Flows: ${sortedFlows.length}, Days: ${totalDays}`);
   console.log(`  First flow: ${firstCashFlow}, Last flow: ${lastCashFlow}`);
   console.log(`  Net: ${netCashFlow}, Total in: ${totalInflows}, Total out: ${totalOutflows}`);
+  console.log('  All flows:');
+  sortedFlows.forEach((flow, i) => {
+    console.log(`    ${i}: ${flow.date.toISOString().split('T')[0]} = ${flow.amount} (${flow.description || 'no desc'})`);
+  });
 
   const newtonResult = calculateWithNewtonRaphson(sortedFlows, startDate);
   const brentResult = calculateWithBrent(sortedFlows, startDate);
