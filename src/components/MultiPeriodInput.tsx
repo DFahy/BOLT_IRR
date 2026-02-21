@@ -691,11 +691,17 @@ export function MultiPeriodInput({
                         </div>
 
                         <div className="flex justify-between items-center">
-                          <span className="text-slate-600">Total</span>
+                          <span className="text-slate-600">Intermediate Flows</span>
                           <span className={`font-semibold ${
-                            periodResult.result.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
+                            (() => {
+                              const intermediateSum = periodResult.cashFlows.slice(1, -1).reduce((sum, cf) => sum + cf.amount, 0);
+                              return intermediateSum >= 0 ? 'text-green-600' : 'text-red-600';
+                            })()
                           }`}>
-                            {periodResult.result.netCashFlow >= 0 ? '$' : '-$'}{Math.abs(periodResult.result.netCashFlow).toLocaleString(undefined, {
+                            {(() => {
+                              const intermediateSum = periodResult.cashFlows.slice(1, -1).reduce((sum, cf) => sum + cf.amount, 0);
+                              return intermediateSum >= 0 ? '$' : '-$';
+                            })()}{Math.abs(periodResult.cashFlows.slice(1, -1).reduce((sum, cf) => sum + cf.amount, 0)).toLocaleString(undefined, {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2
                             })}
