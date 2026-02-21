@@ -110,7 +110,7 @@ function App() {
 
     flows.push({
       date: startDate,
-      amount: -Math.abs(parseFloat(effectiveStartValue)),
+      amount: parseFloat(effectiveStartValue),
       description: 'Period Start Value'
     });
 
