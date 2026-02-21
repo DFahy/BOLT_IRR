@@ -121,7 +121,7 @@ function App() {
         amount: parseFloat(f.amount),
         description: f.description
       }))
-      .filter(f => f.date > startDate && f.date < endDate);
+      .filter(f => f.date >= startDate && f.date <= endDate);
 
     console.log(`Building flows for ${startDateStr} to ${endDateStr}`);
     console.log(`  Start date obj: ${startDate.toISOString()}, End date obj: ${endDate.toISOString()}`);
