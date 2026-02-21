@@ -446,7 +446,10 @@ export function MultiPeriodInput({
           {(() => {
             const validResults = periodResults.filter(pr => pr.result && !pr.error);
             const totalCalculations = validResults.length;
-            const mismatchedPeriods = validResults.filter(pr => pr.result?.hasDifference);
+            const mismatchedPeriods = validResults.filter(pr =>
+              pr.result?.hasDifference &&
+              Math.abs(pr.result.newtonRaphson.rate - pr.result.brent.rate) > 0.1
+            );
             const methodMismatches = mismatchedPeriods.length;
             const mismatchPeriodNames = mismatchedPeriods.map(pr => pr.period);
 
@@ -587,15 +590,15 @@ export function MultiPeriodInput({
                         </div>
                       )}
                       <div className={`rounded-lg p-4 border ${
-                        periodResult.result.hasDifference
+                        periodResult.result.hasDifference && Math.abs(periodResult.result.newtonRaphson.rate - periodResult.result.brent.rate) > 0.1
                           ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300'
                           : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200'
                       }`}>
-                        {periodResult.result.hasDifference ? (
+                        {periodResult.result.hasDifference && Math.abs(periodResult.result.newtonRaphson.rate - periodResult.result.brent.rate) > 0.1 ? (
                           <>
                             <p className="text-xs text-slate-600 mb-1 font-medium">Calculation Result</p>
                             <p className="text-3xl font-bold text-amber-600">N/A</p>
-                            <p className="text-[10px] text-amber-700 mt-1">Methods disagree - result unreliable</p>
+                            <p className="text-[10px] text-amber-700 mt-1">Methods disagree significantly - result unreliable</p>
                           </>
                         ) : periodResult.result.totalDays < 365 ? (
                           <>
@@ -625,10 +628,15 @@ export function MultiPeriodInput({
                             <GitCompare className="w-4 h-4" />
                             Method Comparison
                           </h4>
-                          {periodResult.result.hasDifference ? (
+                          {periodResult.result.hasDifference && Math.abs(periodResult.result.newtonRaphson.rate - periodResult.result.brent.rate) > 0.1 ? (
                             <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-100 px-2 py-1 rounded">
                               <AlertTriangle className="w-3 h-3" />
                               Different
+                            </span>
+                          ) : periodResult.result.hasDifference && Math.abs(periodResult.result.newtonRaphson.rate - periodResult.result.brent.rate) > 0.001 ? (
+                            <span className="flex items-center gap-1 text-xs font-medium text-yellow-600 bg-yellow-100 px-2 py-1 rounded">
+                              <AlertCircle className="w-3 h-3" />
+                              Minor Diff
                             </span>
                           ) : (
                             <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded">
@@ -640,7 +648,7 @@ export function MultiPeriodInput({
 
                         <div className="space-y-2 text-[11px]">
                           <div className={`flex justify-between items-center p-2 rounded ${
-                            periodResult.result.hasDifference ? 'bg-blue-100 border border-blue-300' : 'bg-white'
+                            Math.abs(periodResult.result.newtonRaphson.finalNPV) < Math.abs(periodResult.result.brent.finalNPV) ? 'bg-green-100 border border-green-300' : 'bg-white'
                           }`}>
                             <span className="font-medium text-slate-700 truncate pr-1">Newton-Raphson:</span>
                             <span className="font-mono font-semibold text-slate-800 flex-shrink-0">
@@ -649,7 +657,7 @@ export function MultiPeriodInput({
                           </div>
 
                           <div className={`flex justify-between items-center p-2 rounded ${
-                            periodResult.result.hasDifference ? 'bg-green-100 border border-green-300' : 'bg-white'
+                            Math.abs(periodResult.result.brent.finalNPV) < Math.abs(periodResult.result.newtonRaphson.finalNPV) ? 'bg-green-100 border border-green-300' : 'bg-white'
                           }`}>
                             <span className="font-medium text-slate-700 truncate pr-1">Brent's Method:</span>
                             <span className="font-mono font-semibold text-slate-800 flex-shrink-0">
@@ -657,7 +665,7 @@ export function MultiPeriodInput({
                             </span>
                           </div>
 
-                          {periodResult.result.hasDifference && (
+                          {periodResult.result.hasDifference && Math.abs(periodResult.result.newtonRaphson.rate - periodResult.result.brent.rate) > 0.001 && (
                             <div className="flex justify-between p-2 bg-amber-50 border border-amber-200 rounded">
                               <span className="font-medium text-amber-800">Difference:</span>
                               <span className="font-mono font-semibold text-amber-900">
