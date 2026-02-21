@@ -38,6 +38,7 @@ interface PeriodResult {
   cashFlows: CashFlow[];
   result: XIRRResult | null;
   error?: string;
+  warning?: string;
 }
 
 export function MultiPeriodInput({
@@ -195,7 +196,31 @@ export function MultiPeriodInput({
       };
     }
 
-    return { period: p.label, startDate: p.startDate, endDate: p.endDate, years, cashFlows, result };
+    // Detect problematic cash flow patterns
+    let warning: string | undefined;
+
+    // Check for all same sign flows
+    const significantFlows = cashFlows.filter(f => Math.abs(f.amount) > 1);
+    const allPositive = significantFlows.every(f => f.amount > 0);
+    const allNegative = significantFlows.every(f => f.amount < 0);
+
+    if (allPositive || allNegative) {
+      warning = 'All cash flows have the same sign - XIRR calculation is meaningless';
+    } else if (result.totalOutflows > 0) {
+      // Check for unidirectional flows
+      const totalMagnitude = result.totalInflows + result.totalOutflows;
+      const netPercentage = Math.abs(result.netCashFlow / totalMagnitude);
+
+      if (netPercentage > 0.8) {
+        warning = 'Large unidirectional flows detected - consider using Time-Weighted Return instead';
+      } else if (result.hasDifference && Math.abs(result.newtonRaphson.rate - result.brent.rate) > 1.0) {
+        warning = 'Cash flow pattern causes extreme calculation instability - result unreliable';
+      } else if (Math.abs(parseFloat(result.xirrPercent)) > 100 && result.totalDays < 365) {
+        warning = 'Extreme return detected - may indicate cash flow timing issues';
+      }
+    }
+
+    return { period: p.label, startDate: p.startDate, endDate: p.endDate, years, cashFlows, result, warning };
   });
 
   return (
@@ -497,6 +522,15 @@ export function MultiPeriodInput({
                 <div className="p-6">
                   {periodResult.error || (periodResult.result && periodResult.result.errorReason) ? (
                     <div className="space-y-4">
+                      {periodResult.warning && (
+                        <div className="flex items-start gap-2 p-3 bg-red-50 border-2 border-red-300 rounded-lg">
+                          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-semibold text-red-800">Cash Flow Issue</p>
+                            <p className="text-xs text-red-700 mt-1">{periodResult.warning}</p>
+                          </div>
+                        </div>
+                      )}
                       <div className="flex items-start gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                         <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                         <div>
@@ -543,6 +577,15 @@ export function MultiPeriodInput({
                     </div>
                   ) : periodResult.result ? (
                     <div className="space-y-4">
+                      {periodResult.warning && (
+                        <div className="flex items-start gap-2 p-3 bg-red-50 border-2 border-red-300 rounded-lg">
+                          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-semibold text-red-800">Warning: Cash Flow Issue</p>
+                            <p className="text-xs text-red-700 mt-1">{periodResult.warning}</p>
+                          </div>
+                        </div>
+                      )}
                       <div className={`rounded-lg p-4 border ${
                         periodResult.result.hasDifference
                           ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300'
