@@ -10,6 +10,7 @@ interface PeriodResult {
   startValue?: number;
   endValue?: number;
   totalFlows?: number;
+  warning?: string;
 }
 
 interface MultiPeriodAnalysisProps {
@@ -63,13 +64,37 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
         };
       }
 
+      // Detect abnormal patterns that make XIRR misleading
+      let warning: string | undefined;
+
+      // Check if all flows have the same sign (except near-zero values)
+      const significantFlows = filteredFlows.filter(f => Math.abs(f.amount) > 1);
+      const allPositive = significantFlows.every(f => f.amount > 0);
+      const allNegative = significantFlows.every(f => f.amount < 0);
+
+      if (allPositive || allNegative) {
+        warning = 'Cash flows all same sign - XIRR may be misleading';
+      } else if (xirrResult.totalOutflows > 0) {
+        // Check if this looks like a cash/borrowing account (net flow close to total magnitude)
+        const totalMagnitude = xirrResult.totalInflows + xirrResult.totalOutflows;
+        const netPercentage = Math.abs(xirrResult.netCashFlow / totalMagnitude);
+
+        // If net is close to the total magnitude, it means most cash flows are unidirectional
+        if (netPercentage > 0.8) {
+          warning = 'Large unidirectional flows - consider Time-Weighted Return instead';
+        } else if (Math.abs(parseFloat(xirrResult.xirrPercent)) > 100 && totalDays < 365) {
+          warning = 'Extreme return - may indicate cash flow timing issues';
+        }
+      }
+
       return {
         period,
         years,
         result: xirrResult,
         startValue,
         endValue,
-        totalFlows
+        totalFlows,
+        warning
       };
     });
   }, [cashFlows]);
@@ -189,7 +214,15 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
                 </div>
               ) : periodResult.result ? (
                 <div className="space-y-2">
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded p-2 border border-green-200 text-center">
+                  {periodResult.warning && (
+                    <div className="flex items-start gap-1 p-1.5 bg-amber-50 border border-amber-300 rounded">
+                      <AlertTriangle className="w-3 h-3 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-[9px] text-amber-800 leading-tight">{periodResult.warning}</p>
+                    </div>
+                  )}
+                  <div className={`bg-gradient-to-br from-green-50 to-emerald-50 rounded p-2 border ${
+                    periodResult.warning ? 'border-amber-300' : 'border-green-200'
+                  } text-center`}>
                     {periodResult.result.totalDays < 365 ? (
                       <>
                         <p className="text-[9px] text-slate-600 mb-0.5 font-medium">Simple Return</p>
@@ -294,6 +327,39 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
             <p className="leading-relaxed">
               Your final cash flow should represent the current market value (positive number).
               Negative ending values indicate losses exceeding 100% and will produce invalid results.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-amber-50 border border-amber-300 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-amber-600" />
+          When XIRR Can Be Misleading
+        </h3>
+        <div className="space-y-4 text-sm text-slate-700">
+          <div>
+            <h4 className="font-semibold text-slate-800 mb-2">Cash and Borrowing Accounts</h4>
+            <p className="leading-relaxed">
+              XIRR is designed for investments with changing values. For cash accounts, overdrafts, or loans
+              <strong> without interest charges</strong>, the return should be 0%, but XIRR may show misleading
+              values based on the timing and size of deposits/withdrawals. Use Time-Weighted Return (TWR) instead.
+            </p>
+          </div>
+          <div>
+            <h4 className="font-semibold text-slate-800 mb-2">Large Unidirectional Flows</h4>
+            <p className="leading-relaxed">
+              When most cash flows go in one direction (mostly deposits or mostly withdrawals), XIRR becomes
+              highly sensitive to timing. A warning appears when flows suggest the account behaves more like
+              a cash account than an investment.
+            </p>
+          </div>
+          <div>
+            <h4 className="font-semibold text-slate-800 mb-2">Best Use Cases for XIRR</h4>
+            <p className="leading-relaxed">
+              XIRR works best for: investment portfolios where contributions earn returns, accounts with both
+              significant inflows and outflows, and scenarios where the timing of contributions affects wealth
+              accumulation. It measures how effectively your money has worked for you.
             </p>
           </div>
         </div>
