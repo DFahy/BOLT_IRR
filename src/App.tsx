@@ -121,7 +121,7 @@ function App() {
         amount: parseFloat(f.amount),
         description: f.description
       }))
-      .filter(f => f.date > startDate && f.date < endDate);
+      .filter(f => f.date >= startDate && f.date <= endDate);
 
     console.log(`Building flows for ${startDateStr} to ${endDateStr}`);
     console.log(`  Start date obj: ${startDate.toISOString()}, End date obj: ${endDate.toISOString()}`);
@@ -132,7 +132,7 @@ function App() {
     periodFlows.forEach(pf => {
       if (pf.date && pf.amount) {
         const pfDate = new Date(pf.date);
-        const isBetween = pfDate > startDate && pfDate < endDate;
+        const isBetween = pfDate >= startDate && pfDate <= endDate;
         console.log(`    Flow: ${pf.date} (${pfDate.toISOString()}) = ${pf.amount} - Between? ${isBetween}`);
       }
     });
