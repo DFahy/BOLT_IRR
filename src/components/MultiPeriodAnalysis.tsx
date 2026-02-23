@@ -7,6 +7,7 @@ interface PeriodResult {
   years: number;
   result: XIRRResult | null;
   error?: string;
+  filteredFlows?: CashFlow[];
 }
 
 interface MultiPeriodAnalysisProps {
@@ -34,7 +35,8 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
           period,
           years,
           result: null,
-          error: 'Insufficient data for this period'
+          error: 'Insufficient data for this period',
+          filteredFlows: []
         };
       }
 
@@ -45,7 +47,8 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
           period,
           years,
           result: null,
-          error: 'Unable to calculate (invalid cash flow pattern)'
+          error: 'Unable to calculate (invalid cash flow pattern)',
+          filteredFlows
         };
       }
 
@@ -53,6 +56,7 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
         period,
         years,
         result: xirrResult,
+        filteredFlows
       };
     });
   }, [cashFlows]);
@@ -142,47 +146,83 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
                   </div>
                 </div>
               ) : periodResult.result ? (
-                <div className="space-y-2">
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded p-2 border border-green-200 text-center">
-                    {periodResult.result.totalDays < 365 ? (
-                      <>
-                        <p className="text-[9px] text-slate-600 mb-0.5 font-medium">Simple Return</p>
-                        <p className={`text-xl font-bold ${
-                          parseFloat(periodResult.result.simpleReturnPercent) >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {periodResult.result.simpleReturnPercent}%
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-[9px] text-slate-600 mb-0.5 font-medium">XIRR</p>
-                        <p className={`text-xl font-bold ${
-                          parseFloat(periodResult.result.xirrPercent) >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {periodResult.result.xirrPercent}%
-                        </p>
-                      </>
-                    )}
-                  </div>
+                (() => {
+                  const sortedFlows = periodResult.filteredFlows?.sort((a, b) => a.date.getTime() - b.date.getTime()) || [];
+                  const startValue = sortedFlows[0]?.amount || 0;
+                  const endValue = sortedFlows[sortedFlows.length - 1]?.amount || 0;
+                  const intermediateFlows = sortedFlows.slice(1, -1).reduce((sum, flow) => sum + flow.amount, 0);
 
-                  <div className="space-y-1 text-[10px]">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600">Days</span>
-                      <span className="font-semibold text-slate-800">
-                        {periodResult.result.totalDays}
-                      </span>
-                    </div>
+                  return (
+                    <div className="space-y-2">
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded p-2 border border-green-200 text-center">
+                        {periodResult.result.totalDays < 365 ? (
+                          <>
+                            <p className="text-[9px] text-slate-600 mb-0.5 font-medium">Simple Return</p>
+                            <p className={`text-xl font-bold ${
+                              parseFloat(periodResult.result.simpleReturnPercent) >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {periodResult.result.simpleReturnPercent}%
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-[9px] text-slate-600 mb-0.5 font-medium">XIRR</p>
+                            <p className={`text-xl font-bold ${
+                              parseFloat(periodResult.result.xirrPercent) >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {periodResult.result.xirrPercent}%
+                            </p>
+                          </>
+                        )}
+                      </div>
 
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600">Net</span>
-                      <span className={`font-semibold ${
-                        periodResult.result.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        ${(periodResult.result.netCashFlow / 1000).toFixed(0)}k
-                      </span>
+                      <div className="space-y-1 text-[10px]">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">Start</span>
+                          <span className={`font-semibold ${
+                            startValue >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            ${(startValue / 1000).toFixed(0)}k
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">End</span>
+                          <span className={`font-semibold ${
+                            endValue >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            ${(endValue / 1000).toFixed(0)}k
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">Flows</span>
+                          <span className={`font-semibold ${
+                            intermediateFlows >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            ${(intermediateFlows / 1000).toFixed(0)}k
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">Days</span>
+                          <span className="font-semibold text-slate-800">
+                            {periodResult.result.totalDays}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">Net</span>
+                          <span className={`font-semibold ${
+                            periodResult.result.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            ${(periodResult.result.netCashFlow / 1000).toFixed(0)}k
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  );
+                })()
               ) : null}
             </div>
           </div>
