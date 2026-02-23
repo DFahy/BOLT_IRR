@@ -30,14 +30,13 @@ export interface XIRRResult {
   hasDifference: boolean;
   difference: number;
   differencePercent: string;
-  errorReason?: string;
 }
 
 function dateDiffInDays(date1: Date, date2: Date): number {
   const msPerDay = 1000 * 60 * 60 * 24;
   const utc1 = Date.UTC(date1.getFullYear(), date1.getMonth(), date1.getDate());
   const utc2 = Date.UTC(date2.getFullYear(), date2.getMonth(), date2.getDate());
-  return Math.abs((utc2 - utc1) / msPerDay) + 1;
+  return Math.abs((utc2 - utc1) / msPerDay);
 }
 
 function calculateNPV(rate: number, cashFlows: CashFlow[], startDate: Date): number {
@@ -219,8 +218,7 @@ function calculateWithBrent(
 
 export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
   if (cashFlows.length < 2) {
-    console.log('XIRR: Insufficient flows (< 2)');
-    return { errorReason: 'Insufficient data: at least 2 cash flows required' } as any;
+    return null;
   }
 
   const sortedFlows = [...cashFlows].sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -237,14 +235,9 @@ export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
   const firstCashFlow = sortedFlows[0].amount;
   const lastCashFlow = sortedFlows[sortedFlows.length - 1].amount;
 
-  console.log('XIRR calculation:');
-  console.log(`  Flows: ${sortedFlows.length}, Days: ${totalDays}`);
-  console.log(`  First flow: ${firstCashFlow}, Last flow: ${lastCashFlow}`);
-  console.log(`  Net: ${netCashFlow}, Total in: ${totalInflows}, Total out: ${totalOutflows}`);
-  console.log('  All flows:');
-  sortedFlows.forEach((flow, i) => {
-    console.log(`    ${i}: ${flow.date.toISOString().split('T')[0]} = ${flow.amount} (${flow.description || 'no desc'})`);
-  });
+  if (lastCashFlow < 0 && netCashFlow < 0) {
+    return null;
+  }
 
   const newtonResult = calculateWithNewtonRaphson(sortedFlows, startDate);
   const brentResult = calculateWithBrent(sortedFlows, startDate);

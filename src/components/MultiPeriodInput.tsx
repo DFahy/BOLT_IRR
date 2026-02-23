@@ -38,7 +38,6 @@ interface PeriodResult {
   cashFlows: CashFlow[];
   result: XIRRResult | null;
   error?: string;
-  warning?: string;
 }
 
 export function MultiPeriodInput({
@@ -196,31 +195,7 @@ export function MultiPeriodInput({
       };
     }
 
-    // Detect problematic cash flow patterns
-    let warning: string | undefined;
-
-    // Check for all same sign flows
-    const significantFlows = cashFlows.filter(f => Math.abs(f.amount) > 1);
-    const allPositive = significantFlows.every(f => f.amount > 0);
-    const allNegative = significantFlows.every(f => f.amount < 0);
-
-    if (allPositive || allNegative) {
-      warning = 'All cash flows have the same sign - XIRR calculation is meaningless';
-    } else if (result.totalOutflows > 0) {
-      // Check for unidirectional flows
-      const totalMagnitude = result.totalInflows + result.totalOutflows;
-      const netPercentage = Math.abs(result.netCashFlow / totalMagnitude);
-
-      if (netPercentage > 0.8) {
-        warning = 'Large unidirectional flows detected - consider using Time-Weighted Return instead';
-      } else if (result.hasDifference && Math.abs(result.newtonRaphson.rate - result.brent.rate) > 1.0) {
-        warning = 'Cash flow pattern causes extreme calculation instability - result unreliable';
-      } else if (Math.abs(parseFloat(result.xirrPercent)) > 100 && result.totalDays < 365) {
-        warning = 'Extreme return detected - may indicate cash flow timing issues';
-      }
-    }
-
-    return { period: p.label, startDate: p.startDate, endDate: p.endDate, years, cashFlows, result, warning };
+    return { period: p.label, startDate: p.startDate, endDate: p.endDate, years, cashFlows, result };
   });
 
   return (
@@ -446,10 +421,7 @@ export function MultiPeriodInput({
           {(() => {
             const validResults = periodResults.filter(pr => pr.result && !pr.error);
             const totalCalculations = validResults.length;
-            const mismatchedPeriods = validResults.filter(pr =>
-              pr.result?.hasDifference &&
-              Math.abs(pr.result.newtonRaphson.rate - pr.result.brent.rate) > 0.1
-            );
+            const mismatchedPeriods = validResults.filter(pr => pr.result?.hasDifference);
             const methodMismatches = mismatchedPeriods.length;
             const mismatchPeriodNames = mismatchedPeriods.map(pr => pr.period);
 
@@ -523,82 +495,26 @@ export function MultiPeriodInput({
                 </div>
 
                 <div className="p-6">
-                  {periodResult.error || (periodResult.result && periodResult.result.errorReason) ? (
-                    <div className="space-y-4">
-                      {periodResult.warning && (
-                        <div className="flex items-start gap-2 p-3 bg-red-50 border-2 border-red-300 rounded-lg">
-                          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-sm font-semibold text-red-800">Cash Flow Issue</p>
-                            <p className="text-xs text-red-700 mt-1">{periodResult.warning}</p>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-start gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-amber-800">Not Available</p>
-                          <p className="text-xs text-amber-700 mt-1">
-                            {periodResult.error || periodResult.result?.errorReason}
-                          </p>
-                        </div>
+                  {periodResult.error ? (
+                    <div className="flex items-start gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-amber-800">Not Available</p>
+                        <p className="text-xs text-amber-700 mt-1">{periodResult.error}</p>
                       </div>
-                      {periodResult.cashFlows.length > 0 && (
-                        <div className="space-y-2">
-                          <div className="bg-white p-3 rounded-lg border border-slate-200">
-                            <p className="text-xs text-slate-600 mb-1">Start Value</p>
-                            <p className={`text-lg font-bold ${
-                              periodResult.cashFlows[0].amount >= 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {periodResult.cashFlows[0].amount >= 0 ? '$' : '-$'}{Math.abs(periodResult.cashFlows[0].amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                          </div>
-                          <div className="bg-white p-3 rounded-lg border border-slate-200">
-                            <p className="text-xs text-slate-600 mb-1">End Value</p>
-                            <p className={`text-lg font-bold ${
-                              periodResult.cashFlows[periodResult.cashFlows.length - 1].amount >= 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {periodResult.cashFlows[periodResult.cashFlows.length - 1].amount >= 0 ? '$' : '-$'}{Math.abs(periodResult.cashFlows[periodResult.cashFlows.length - 1].amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                          </div>
-                          <div className="bg-white p-3 rounded-lg border border-slate-200">
-                            <p className="text-xs text-slate-600 mb-1">Intermediate Flows</p>
-                            <p className={`text-lg font-bold ${
-                              (() => {
-                                const intermediateSum = periodResult.cashFlows.slice(1, -1).reduce((sum, cf) => sum + cf.amount, 0);
-                                return intermediateSum >= 0 ? 'text-green-600' : 'text-red-600';
-                              })()
-                            }`}>
-                              {(() => {
-                                const intermediateSum = periodResult.cashFlows.slice(1, -1).reduce((sum, cf) => sum + cf.amount, 0);
-                                return intermediateSum >= 0 ? '$' : '-$';
-                              })()}{Math.abs(periodResult.cashFlows.slice(1, -1).reduce((sum, cf) => sum + cf.amount, 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   ) : periodResult.result ? (
                     <div className="space-y-4">
-                      {periodResult.warning && (
-                        <div className="flex items-start gap-2 p-3 bg-red-50 border-2 border-red-300 rounded-lg">
-                          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-sm font-semibold text-red-800">Warning: Cash Flow Issue</p>
-                            <p className="text-xs text-red-700 mt-1">{periodResult.warning}</p>
-                          </div>
-                        </div>
-                      )}
                       <div className={`rounded-lg p-4 border ${
-                        periodResult.result.hasDifference && Math.abs(periodResult.result.newtonRaphson.rate - periodResult.result.brent.rate) > 0.1
+                        periodResult.result.hasDifference
                           ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300'
                           : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200'
                       }`}>
-                        {periodResult.result.hasDifference && Math.abs(periodResult.result.newtonRaphson.rate - periodResult.result.brent.rate) > 0.1 ? (
+                        {periodResult.result.hasDifference ? (
                           <>
                             <p className="text-xs text-slate-600 mb-1 font-medium">Calculation Result</p>
                             <p className="text-3xl font-bold text-amber-600">N/A</p>
-                            <p className="text-[10px] text-amber-700 mt-1">Methods disagree significantly - result unreliable</p>
+                            <p className="text-[10px] text-amber-700 mt-1">Methods disagree - result unreliable</p>
                           </>
                         ) : periodResult.result.totalDays < 365 ? (
                           <>
@@ -628,15 +544,10 @@ export function MultiPeriodInput({
                             <GitCompare className="w-4 h-4" />
                             Method Comparison
                           </h4>
-                          {periodResult.result.hasDifference && Math.abs(periodResult.result.newtonRaphson.rate - periodResult.result.brent.rate) > 0.1 ? (
+                          {periodResult.result.hasDifference ? (
                             <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-100 px-2 py-1 rounded">
                               <AlertTriangle className="w-3 h-3" />
                               Different
-                            </span>
-                          ) : periodResult.result.hasDifference && Math.abs(periodResult.result.newtonRaphson.rate - periodResult.result.brent.rate) > 0.001 ? (
-                            <span className="flex items-center gap-1 text-xs font-medium text-yellow-600 bg-yellow-100 px-2 py-1 rounded">
-                              <AlertCircle className="w-3 h-3" />
-                              Minor Diff
                             </span>
                           ) : (
                             <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded">
@@ -648,7 +559,7 @@ export function MultiPeriodInput({
 
                         <div className="space-y-2 text-[11px]">
                           <div className={`flex justify-between items-center p-2 rounded ${
-                            Math.abs(periodResult.result.newtonRaphson.finalNPV) < Math.abs(periodResult.result.brent.finalNPV) ? 'bg-green-100 border border-green-300' : 'bg-white'
+                            periodResult.result.hasDifference ? 'bg-blue-100 border border-blue-300' : 'bg-white'
                           }`}>
                             <span className="font-medium text-slate-700 truncate pr-1">Newton-Raphson:</span>
                             <span className="font-mono font-semibold text-slate-800 flex-shrink-0">
@@ -657,7 +568,7 @@ export function MultiPeriodInput({
                           </div>
 
                           <div className={`flex justify-between items-center p-2 rounded ${
-                            Math.abs(periodResult.result.brent.finalNPV) < Math.abs(periodResult.result.newtonRaphson.finalNPV) ? 'bg-green-100 border border-green-300' : 'bg-white'
+                            periodResult.result.hasDifference ? 'bg-green-100 border border-green-300' : 'bg-white'
                           }`}>
                             <span className="font-medium text-slate-700 truncate pr-1">Brent's Method:</span>
                             <span className="font-mono font-semibold text-slate-800 flex-shrink-0">
@@ -665,7 +576,7 @@ export function MultiPeriodInput({
                             </span>
                           </div>
 
-                          {periodResult.result.hasDifference && Math.abs(periodResult.result.newtonRaphson.rate - periodResult.result.brent.rate) > 0.001 && (
+                          {periodResult.result.hasDifference && (
                             <div className="flex justify-between p-2 bg-amber-50 border border-amber-200 rounded">
                               <span className="font-medium text-amber-800">Difference:</span>
                               <span className="font-mono font-semibold text-amber-900">
@@ -718,23 +629,9 @@ export function MultiPeriodInput({
                         </div>
 
                         <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                          <span className="text-slate-600">Start</span>
-                          <span className={`font-semibold ${
-                            periodResult.cashFlows[0].amount >= 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {periodResult.cashFlows[0].amount >= 0 ? '$' : '-$'}{Math.abs(periodResult.cashFlows[0].amount).toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2
-                            })}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                          <span className="text-slate-600">End</span>
-                          <span className={`font-semibold ${
-                            periodResult.cashFlows[periodResult.cashFlows.length - 1].amount >= 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {periodResult.cashFlows[periodResult.cashFlows.length - 1].amount >= 0 ? '$' : '-$'}{Math.abs(periodResult.cashFlows[periodResult.cashFlows.length - 1].amount).toLocaleString(undefined, {
+                          <span className="text-slate-600">Total Invested</span>
+                          <span className="font-semibold text-red-600">
+                            ${periodResult.result.totalOutflows.toLocaleString(undefined, {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2
                             })}
@@ -742,17 +639,9 @@ export function MultiPeriodInput({
                         </div>
 
                         <div className="flex justify-between items-center">
-                          <span className="text-slate-600">Intermediate Flows</span>
-                          <span className={`font-semibold ${
-                            (() => {
-                              const intermediateSum = periodResult.cashFlows.slice(1, -1).reduce((sum, cf) => sum + cf.amount, 0);
-                              return intermediateSum >= 0 ? 'text-green-600' : 'text-red-600';
-                            })()
-                          }`}>
-                            {(() => {
-                              const intermediateSum = periodResult.cashFlows.slice(1, -1).reduce((sum, cf) => sum + cf.amount, 0);
-                              return intermediateSum >= 0 ? '$' : '-$';
-                            })()}{Math.abs(periodResult.cashFlows.slice(1, -1).reduce((sum, cf) => sum + cf.amount, 0)).toLocaleString(undefined, {
+                          <span className="text-slate-600">Total Returns</span>
+                          <span className="font-semibold text-green-600">
+                            ${periodResult.result.totalInflows.toLocaleString(undefined, {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2
                             })}

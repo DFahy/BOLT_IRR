@@ -123,36 +123,13 @@ function App() {
       }))
       .filter(f => f.date >= startDate && f.date <= endDate);
 
-    console.log(`Building flows for ${startDateStr} to ${endDateStr}`);
-    console.log(`  Start date obj: ${startDate.toISOString()}, End date obj: ${endDate.toISOString()}`);
-    console.log(`  Start value: ${effectiveStartValue}, End value: ${endValue}`);
-    console.log(`  Total period flows available: ${periodFlows.length}`);
-
-    // Debug: show all period flows
-    periodFlows.forEach(pf => {
-      if (pf.date && pf.amount) {
-        const pfDate = new Date(pf.date);
-        const isBetween = pfDate >= startDate && pfDate <= endDate;
-        console.log(`    Flow: ${pf.date} (${pfDate.toISOString()}) = ${pf.amount} - Between? ${isBetween}`);
-      }
-    });
-
-    console.log(`  Intermediate flows found: ${intermediateFlows.length}`);
-    if (intermediateFlows.length > 0) {
-      intermediateFlows.forEach(f => {
-        console.log(`    Included: ${f.date.toISOString().split('T')[0]}: ${f.amount}`);
-      });
-    }
-
     flows.push(...intermediateFlows);
 
     flows.push({
       date: endDate,
-      amount: Math.abs(parseFloat(endValue)),
+      amount: parseFloat(endValue),
       description: 'Period End Value'
     });
-
-    console.log(`  Final flow count: ${flows.length}`);
 
     return flows.sort((a, b) => a.date.getTime() - b.date.getTime());
   };
