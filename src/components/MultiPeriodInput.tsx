@@ -647,48 +647,13 @@ export function MultiPeriodInput({
                                 </span>
                               </div>
 
-                              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                              <div className="flex justify-between items-center">
                                 <span className="text-slate-600 flex items-center gap-1">
                                   <Calendar className="w-4 h-4" />
                                   Time Period
                                 </span>
                                 <span className="font-semibold text-slate-800">
                                   {periodResult.result.totalDays} days
-                                </span>
-                              </div>
-
-                              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                                <span className="text-slate-600 flex items-center gap-1">
-                                  <DollarSign className="w-4 h-4" />
-                                  Net Cash Flow
-                                </span>
-                                <span className={`font-semibold ${
-                                  periodResult.result.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
-                                }`}>
-                                  ${periodResult.result.netCashFlow.toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                  })}
-                                </span>
-                              </div>
-
-                              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                                <span className="text-slate-600">Total Invested</span>
-                                <span className="font-semibold text-red-600">
-                                  ${periodResult.result.totalOutflows.toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                  })}
-                                </span>
-                              </div>
-
-                              <div className="flex justify-between items-center">
-                                <span className="text-slate-600">Total Returns</span>
-                                <span className="font-semibold text-green-600">
-                                  ${periodResult.result.totalInflows.toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                  })}
                                 </span>
                               </div>
                             </>
