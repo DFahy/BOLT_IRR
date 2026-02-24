@@ -603,50 +603,97 @@ export function MultiPeriodInput({
                       </div>
 
                       <div className="space-y-3 text-sm">
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                          <span className="text-slate-600 flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            Time Period
-                          </span>
-                          <span className="font-semibold text-slate-800">
-                            {periodResult.result.totalDays} days
-                          </span>
-                        </div>
+                        {(() => {
+                          const sortedFlows = [...periodResult.cashFlows].sort((a, b) => a.date.getTime() - b.date.getTime());
+                          const startValue = sortedFlows[0]?.amount || 0;
+                          const endValue = sortedFlows[sortedFlows.length - 1]?.amount || 0;
+                          const intermediateFlows = sortedFlows.slice(1, -1).reduce((sum, flow) => sum + flow.amount, 0);
 
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                          <span className="text-slate-600 flex items-center gap-1">
-                            <DollarSign className="w-4 h-4" />
-                            Net Cash Flow
-                          </span>
-                          <span className={`font-semibold ${
-                            periodResult.result.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            ${periodResult.result.netCashFlow.toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2
-                            })}
-                          </span>
-                        </div>
+                          return (
+                            <>
+                              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                                <span className="text-slate-600">Start Value</span>
+                                <span className={`font-semibold ${
+                                  startValue >= 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  ${startValue.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                  })}
+                                </span>
+                              </div>
 
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                          <span className="text-slate-600">Total Invested</span>
-                          <span className="font-semibold text-red-600">
-                            ${periodResult.result.totalOutflows.toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2
-                            })}
-                          </span>
-                        </div>
+                              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                                <span className="text-slate-600">End Value</span>
+                                <span className={`font-semibold ${
+                                  endValue >= 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  ${endValue.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                  })}
+                                </span>
+                              </div>
 
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-600">Total Returns</span>
-                          <span className="font-semibold text-green-600">
-                            ${periodResult.result.totalInflows.toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2
-                            })}
-                          </span>
-                        </div>
+                              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                                <span className="text-slate-600">Intermediate Flows</span>
+                                <span className={`font-semibold ${
+                                  intermediateFlows >= 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  ${intermediateFlows.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                  })}
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                                <span className="text-slate-600 flex items-center gap-1">
+                                  <Calendar className="w-4 h-4" />
+                                  Time Period
+                                </span>
+                                <span className="font-semibold text-slate-800">
+                                  {periodResult.result.totalDays} days
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                                <span className="text-slate-600 flex items-center gap-1">
+                                  <DollarSign className="w-4 h-4" />
+                                  Net Cash Flow
+                                </span>
+                                <span className={`font-semibold ${
+                                  periodResult.result.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  ${periodResult.result.netCashFlow.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                  })}
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                                <span className="text-slate-600">Total Invested</span>
+                                <span className="font-semibold text-red-600">
+                                  ${periodResult.result.totalOutflows.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                  })}
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between items-center">
+                                <span className="text-slate-600">Total Returns</span>
+                                <span className="font-semibold text-green-600">
+                                  ${periodResult.result.totalInflows.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                  })}
+                                </span>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   ) : null}
