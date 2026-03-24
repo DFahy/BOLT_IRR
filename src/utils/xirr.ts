@@ -247,11 +247,39 @@ export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
     return null;
   }
 
-  const newtonResult = calculateWithNewtonRaphson(sortedFlows, startDate);
-  const brentResult = calculateWithBrent(sortedFlows, startDate);
+  // Special case: Break-even scenario (net cash flow is ~$0)
+  // This means the ending value equals all investments - return is 0%
+  const isBreakEven = Math.abs(netCashFlow) < 0.01;
+  let rate: number;
+  let newtonResult: MethodResult;
+  let brentResult: MethodResult;
 
-  const bestResult = Math.abs(newtonResult.finalNPV) < Math.abs(brentResult.finalNPV) ? newtonResult : brentResult;
-  const rate = bestResult.rate;
+  if (isBreakEven) {
+    rate = 0;
+    // Create dummy method results for break-even
+    newtonResult = {
+      rate: 0,
+      ratePercent: '0.000000',
+      iterations: 0,
+      method: 'Newton-Raphson',
+      converged: true,
+      finalNPV: 0
+    };
+    brentResult = {
+      rate: 0,
+      ratePercent: '0.000000',
+      iterations: 0,
+      method: "Brent's Method",
+      converged: true,
+      finalNPV: 0
+    };
+  } else {
+    newtonResult = calculateWithNewtonRaphson(sortedFlows, startDate);
+    brentResult = calculateWithBrent(sortedFlows, startDate);
+
+    const bestResult = Math.abs(newtonResult.finalNPV) < Math.abs(brentResult.finalNPV) ? newtonResult : brentResult;
+    rate = bestResult.rate;
+  }
 
   const difference = Math.abs(newtonResult.rate - brentResult.rate);
   const hasDifference = difference > 0.00001;
