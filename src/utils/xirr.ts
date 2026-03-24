@@ -222,8 +222,16 @@ export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
   }
 
   const sortedFlows = [...cashFlows].sort((a, b) => a.date.getTime() - b.date.getTime());
-  const startDate = sortedFlows[0].date;
-  const endDate = sortedFlows[sortedFlows.length - 1].date;
+
+  // Filter out $0 cash flows to get accurate time period (days actually invested)
+  const nonZeroFlows = sortedFlows.filter(f => f.amount !== 0);
+
+  if (nonZeroFlows.length < 2) {
+    return null;
+  }
+
+  const startDate = nonZeroFlows[0].date;
+  const endDate = nonZeroFlows[nonZeroFlows.length - 1].date;
   const totalDays = dateDiffInDays(startDate, endDate);
 
   const netCashFlow = sortedFlows.reduce((sum, flow) => sum + flow.amount, 0);
@@ -232,8 +240,8 @@ export function calculateXIRR(cashFlows: CashFlow[]): XIRRResult | null {
   const totalOutflows = outflows.reduce((sum, flow) => sum + Math.abs(flow.amount), 0);
   const totalInflows = inflows.reduce((sum, flow) => sum + flow.amount, 0);
 
-  const firstCashFlow = sortedFlows[0].amount;
-  const lastCashFlow = sortedFlows[sortedFlows.length - 1].amount;
+  const firstCashFlow = nonZeroFlows[0].amount;
+  const lastCashFlow = nonZeroFlows[nonZeroFlows.length - 1].amount;
 
   if (lastCashFlow < 0 && netCashFlow < 0) {
     return null;
