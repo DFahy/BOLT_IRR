@@ -180,7 +180,7 @@ export function MultiPeriodAnalysis({ cashFlows }: MultiPeriodAnalysisProps) {
                         <div className="flex justify-between items-center">
                           <span className="text-slate-600">Start</span>
                           <span className={`font-semibold ${
-                            startValue >= 0 ? 'text-green-600' : 'text-red-600'
+                            startValue <= 0 ? 'text-red-600' : 'text-green-600'
                           }`}>
                             ${(startValue / 1000).toFixed(0)}k
                           </span>

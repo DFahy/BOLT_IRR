@@ -38,6 +38,8 @@ interface PeriodResult {
   cashFlows: CashFlow[];
   result: XIRRResult | null;
   error?: string;
+  inputStartValue: number;
+  inputEndValue: number;
 }
 
 export function MultiPeriodInput({
@@ -170,6 +172,9 @@ export function MultiPeriodInput({
     const daysDiff = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
     const years = daysDiff / 365.25;
 
+    const inputStartValue = parseFloat(p.startValue) || 0;
+    const inputEndValue = parseFloat(p.endValue) || 0;
+
     if (cashFlows.length < 2) {
       return {
         period: p.label,
@@ -178,7 +183,9 @@ export function MultiPeriodInput({
         years,
         cashFlows,
         result: null,
-        error: 'Please enter start date, end date, and values'
+        error: 'Please enter start date, end date, and values',
+        inputStartValue,
+        inputEndValue
       };
     }
 
@@ -191,11 +198,22 @@ export function MultiPeriodInput({
         years,
         cashFlows,
         result: null,
-        error: 'Unable to calculate XIRR'
+        error: 'Unable to calculate XIRR',
+        inputStartValue,
+        inputEndValue
       };
     }
 
-    return { period: p.label, startDate: p.startDate, endDate: p.endDate, years, cashFlows, result };
+    return {
+      period: p.label,
+      startDate: p.startDate,
+      endDate: p.endDate,
+      years,
+      cashFlows,
+      result,
+      inputStartValue,
+      inputEndValue
+    };
   });
 
   return (
@@ -605,18 +623,18 @@ export function MultiPeriodInput({
                       <div className="space-y-3 text-sm">
                         {(() => {
                           const sortedFlows = [...periodResult.cashFlows].sort((a, b) => a.date.getTime() - b.date.getTime());
-                          const startValue = sortedFlows[0]?.amount || 0;
-                          const endValue = sortedFlows[sortedFlows.length - 1]?.amount || 0;
                           const intermediateFlows = sortedFlows.slice(1, -1).reduce((sum, flow) => sum + flow.amount, 0);
+                          const displayStartValue = periodResult.inputStartValue;
+                          const displayEndValue = periodResult.inputEndValue;
 
                           return (
                             <>
                               <div className="flex justify-between items-center pb-2 border-b border-slate-200">
                                 <span className="text-slate-600">Start Value</span>
                                 <span className={`font-semibold ${
-                                  startValue >= 0 ? 'text-green-600' : 'text-red-600'
+                                  displayStartValue >= 0 ? 'text-red-600' : 'text-green-600'
                                 }`}>
-                                  ${startValue.toLocaleString(undefined, {
+                                  ${displayStartValue.toLocaleString(undefined, {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2
                                   })}
@@ -626,9 +644,9 @@ export function MultiPeriodInput({
                               <div className="flex justify-between items-center pb-2 border-b border-slate-200">
                                 <span className="text-slate-600">End Value</span>
                                 <span className={`font-semibold ${
-                                  endValue >= 0 ? 'text-green-600' : 'text-red-600'
+                                  displayEndValue >= 0 ? 'text-green-600' : 'text-red-600'
                                 }`}>
-                                  ${endValue.toLocaleString(undefined, {
+                                  ${displayEndValue.toLocaleString(undefined, {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2
                                   })}
